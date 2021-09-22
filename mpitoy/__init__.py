@@ -34,7 +34,7 @@ class Simulation:
             self.v += self.a * self.dt
             self.x += self.v * self.dt
             self.t += self.dt
-        print(f"Simuation.move: {self.t=}")
+        # print(f"Simuation.move: {self.t=}")
 
 
     @property
@@ -54,25 +54,21 @@ class Simulation:
             ax.set_ybound((0,self.diameter))
             return fig,ax
         else:
-            print('coucou')
             color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
             for i in range(n):
-                print(i)
                 circle = plt.Circle(self.x[:,i], self.radius, color=next(color))
                 ax.add_patch(circle)
-            print("??")
+
 
     def movie_init(self):
         return []
 
 
     def movie_update(self,frame):
-        print(f'Simulation.movie_update {frame=}')
+        print(f'Simulation.movie_update {frame=}, t={self.t}')
         for i in range(self.n):
             self.circles[i].center = self.x[:, i]
         self.move(self.nTimestepsPerFrame)
-        print(f"ncircles={len(self.circles)}")
-        # return self.circles
         return []
 
 

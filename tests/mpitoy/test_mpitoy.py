@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import sys
+sys.path.insert(0,'.')
 """Tests for mpitoy package."""
 import numpy as np
 
@@ -11,7 +13,7 @@ def test_init():
     n = 5
     sim = mpitoy.Simulation(n)
     for i in range(n):
-        assert sim.x[0,i] == i
+        assert sim.x[0,i] == i+sim.radius
     assert sim.n == n
 
 def test_move():
@@ -31,12 +33,6 @@ def test_plot():
     sim.plot(fig,ax)
     plt.show()
 
-
-def test_plot1():
-    sim = mpitoy.Simulation(n=1)
-    fig, ax = sim.plot()
-    sim.plot(fig,ax)
-    plt.show()
 
 def test_movie():
     sim = mpitoy.Simulation(n=5)
