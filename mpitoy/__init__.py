@@ -42,6 +42,19 @@ class ParticleContainer:
             self.v += self.a * dt
             self.x += self.v * dt
 
+
+    def findLeavingParticles(self,xbound):
+        # we only check the X-boudaries
+        movingOutLeft = []
+        movingOutRght = []
+
+        for i in range(self.n):
+            if self.x[0,i] < xbound[0]:
+                movingOutLeft.append(i)
+            if xbound[1] <= self.x[0,i]:
+                movingOutRght.append(i)
+        return movingOutLeft, movingOutRght
+
 COLORS = None
 def setColors(n):
     global COLORS
@@ -49,7 +62,7 @@ def setColors(n):
     COLORS = list(iter(plt.cm.rainbow(np.linspace(0, 1, n))))
 
 class Simulation:
-    def __init__(self, pc=None, xbound=None, label='None', dt=1):
+    def __init__(self, pc=None, xbound=None, label=''):
         if pc is None:
             self.pc = ParticleContainer(0)
         else:
@@ -57,7 +70,6 @@ class Simulation:
         self.pcs = [pc]
         # using 2 dimensions, X,Y
         self.t = 0
-        self.dt = dt
         if xbound:
             self.xbound = xbound
         else:
@@ -65,13 +77,14 @@ class Simulation:
         self.ybound = (0,2*pc.radius)
         self.label = label
 
-    def move(self,nTimesteps):
+    def move(self,dt=0.1, nTimesteps=1):
         for pc in self.pcs:
-            pc.move(dt=self.dt, nTimesteps=nTimesteps)
-        self.t += nTimesteps*self.dt
+            pc.move(dt=dt, nTimesteps=nTimesteps)
+        self.t += nTimesteps*dt
 
 
     def plot(self, show=False, save=False):
+        plt.close()
         fig, ax = plt.subplots()
         ax.set_aspect(1.0)
         ax.set_xbound(*self.xbound)
@@ -85,7 +98,7 @@ class Simulation:
         title = copy(self.label)
         if title:
             title = self.label + ', '
-        title += f't={self.t}'
+        title += f't={round(self.t,2)}'
         plt.title(title)
 
         if show:

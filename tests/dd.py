@@ -23,6 +23,7 @@ print(f"dd3.py: process {rank} of {size} on {name}.\n")
 
 def main():
     """"""
+    ### setup ###
     # Every process makes his own simulation
     if rank == 0:
         n = 5
@@ -34,6 +35,21 @@ def main():
     xbound = (5*rank, 5*(rank+1))
     sim = Simulation(pc, xbound=xbound, label=f"[{rank=}]")
     sim.plot(save=True)
+
+    ### start time evolution ###
+    while sim.t < 10:
+        sim.move(dt=0.2)
+        for pc in sim.pcs:
+            movingOutLeft, movingOutRight = pc.findLeavingParticles(sim.xbound)
+            if movingOutLeft:
+                print(f'{movingOutLeft=}')
+                raise RuntimeError('oops')
+
+            if movingOutRight:
+
+                print(f'{movingOutRight=}')
+
+        sim.plot(save=True)
 
     sendbuffer     = -np.ones((2,), dtype=float)
     recvbufferleft = -np.ones((2,), dtype=float)

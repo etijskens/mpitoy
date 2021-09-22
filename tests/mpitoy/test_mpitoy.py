@@ -26,11 +26,12 @@ def test_move():
     pc = ParticleContainer(n)
     sim = Simulation(pc)
     x0 = np.copy(pc.x[0,:])
-    x0 += pc.v[0,:] * sim.dt
-    sim.move(nTimesteps=1)
+    dt, nTimesteps = 0.1, 1
+    x0 += pc.v[0,:] * dt
+    sim.move(dt=dt, nTimesteps=nTimesteps)
     for i in range(n):
         assert pc.x[0,i] == x0[i]
-    assert sim.t == 1
+    assert sim.t == dt*nTimesteps
 
 
 def test_plot():
@@ -68,7 +69,7 @@ def test_plot_show_save():
 # that the source directory is on the path
 # ==============================================================================
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_movie
+    the_test_you_want_to_debug = test_move
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
