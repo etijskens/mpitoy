@@ -23,16 +23,30 @@ class ParticleContainer:
         self.x = np.zeros(shape)
         self.v = np.zeros(shape)
         self.a = np.zeros(shape)
+        self.id = np.zeros((n,), dtype=int)
         for i in range(n):
             self.x[0,i] = i + radius # X-coordinate
             self.v[0,i] = 0.1
+            self.id[i]  = i
+
         self.x[1,:] = radius         # y-coordinate
+
+
+    @property
+    def n(self):
+        return self.id.shape[0]
+
 
     def move(self, dt, nTimesteps):
         for i in range(nTimesteps):
             self.v += self.a * dt
             self.x += self.v * dt
 
+COLORS = None
+def setColors(n):
+    global COLORS
+    print(type(plt.cm.rainbow(np.linspace(0, 1, n))))
+    COLORS = list(iter(plt.cm.rainbow(np.linspace(0, 1, n))))
 
 class Simulation:
     def __init__(self, pc=None, xbound=None, label='None', dt=1):
@@ -42,10 +56,13 @@ class Simulation:
             self.pc = pc
         self.pcs = [pc]
         # using 2 dimensions, X,Y
-        self.radius = 0.5
         self.t = 0
         self.dt = dt
-        self.xbound = xbound
+        if xbound:
+            self.xbound = xbound
+        else:
+            self.xbound = (0, pc.n*2*pc.radius)
+        self.ybound = (0,2*pc.radius)
         self.label = label
 
     def move(self,nTimesteps):
@@ -54,26 +71,16 @@ class Simulation:
         self.t += nTimesteps*self.dt
 
 
-    @property
-    def n(self):
-        return self.pc.x.shape[1]
-
-    @property
-    def diameter(self):
-        return 2*self.radius
-
     def plot(self, show=False, save=False):
-        n = self.n
         fig, ax = plt.subplots()
         ax.set_aspect(1.0)
         ax.set_xbound(*self.xbound)
-        ax.set_ybound((0,self.diameter))
-
-
-        color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
-        for i in range(n):
-            circle = plt.Circle(self.pc.x[:,i], self.radius, color=next(color))
-            ax.add_patch(circle)
+        ax.set_ybound(*self.ybound)
+        for pc in self.pcs:
+            for i in range(pc.n):
+                id = pc.id[i]
+                circle = plt.Circle(pc.x[:,i], pc.radius, color=COLORS[id])
+                ax.add_patch(circle)
 
         title = copy(self.label)
         if title:
@@ -103,19 +110,18 @@ class Simulation:
 
     def movie(self,nTimesteps=10, nTimestepsPerFrame=1):
         self.nTimestepsPerFrame = nTimestepsPerFrame
-        n = self.n
 
         self.fig, self.ax = plt.subplots()
         self.ax.set_aspect(1.0)
-        self.ax.set_xbound(0, 2 * n * self.diameter)
-        self.ax.set_ybound((0, self.diameter))
+        self.ax.set_xbound(*self.xbound)
+        self.ax.set_ybound(*self.ybound)
 
         self.circles = []
-        color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
-        for i in range(n):
-            circle = plt.Circle(self.pc.x[:, i], self.radius, color=next(color))
-            self.ax.add_patch(circle)
-            self.circles.append(circle)
+        for pc in self.pcs:
+            for i in range(pc.n):
+                circle = plt.Circle(pc.x[:, i], pc.radius, color=COLORS[pc.id[i]])
+                self.ax.add_patch(circle)
+                self.circles.append(circle)
 
         print(f"Simulation.movie:{nTimesteps=}")
         self.animation = FuncAnimation( self.fig

@@ -7,9 +7,10 @@ sys.path.insert(0,'.')
 """Tests for mpitoy package."""
 import numpy as np
 
-from mpitoy import Simulation, ParticleContainer
+from mpitoy import Simulation, ParticleContainer, setColors
 import matplotlib.pyplot as plt
 
+setColors(5)
 
 def test_init():
     n = 5
@@ -17,7 +18,7 @@ def test_init():
     sim = Simulation(pc)
     for i in range(n):
         assert pc.x[0,i] == i + pc.radius
-    assert sim.n == n
+    assert pc.n == n
 
 
 def test_move():
@@ -54,11 +55,11 @@ def test_plot_show_save():
     sim.plot(show=True, save=True)
 
 
-def test_movie():
-    n = 5
-    pc = ParticleContainer(n)
-    sim = Simulation(pc)
-    sim.movie(nTimesteps=50)
+# def test_movie():
+#     n = 5
+#     pc = ParticleContainer(n)
+#     sim = Simulation(pc)
+#     sim.movie(nTimesteps=50)
 
 # ==============================================================================
 # The code below is for debugging a particular test in eclipse/pydev.
@@ -67,7 +68,7 @@ def test_movie():
 # that the source directory is on the path
 # ==============================================================================
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_plot_show_save
+    the_test_you_want_to_debug = test_movie
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
