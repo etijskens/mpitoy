@@ -2,50 +2,62 @@
 
 import sys
 sys.path.insert(0,'.')
+
+
 """Tests for mpitoy package."""
 import numpy as np
 
-import mpitoy
+from mpitoy import Simulation, ParticleContainer
 import matplotlib.pyplot as plt
 
 
 def test_init():
     n = 5
-    sim = mpitoy.Simulation(n)
+    pc = ParticleContainer(n)
+    sim = Simulation(pc)
     for i in range(n):
-        assert sim.x[0,i] == i+sim.radius
+        assert pc.x[0,i] == i + pc.radius
     assert sim.n == n
 
 
 def test_move():
     n = 5
-    sim = mpitoy.Simulation(n)
-    x0 = np.copy(sim.x[0,:])
-    x0 += sim.v[0,:] * sim.dt
-    sim.move()
+    pc = ParticleContainer(n)
+    sim = Simulation(pc)
+    x0 = np.copy(pc.x[0,:])
+    x0 += pc.v[0,:] * sim.dt
+    sim.move(nTimesteps=1)
     for i in range(n):
-        assert sim.x[0,i] == x0[i]
+        assert pc.x[0,i] == x0[i]
     assert sim.t == 1
 
 
 def test_plot():
-    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot')
+    n = 5
+    pc = ParticleContainer(n)
+    sim = Simulation(pc, xbound=(0,10), label='test_plot')
     sim.plot()
     plt.show()
 
 
 def test_plot_show():
-    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot_show')
+    n = 5
+    pc = ParticleContainer(n)
+    sim = Simulation(pc, xbound=(0,10), label='test_plot_show')
     sim.plot(show=True)
 
 
 def test_plot_show_save():
-    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot_show_save')
+    n = 5
+    pc = ParticleContainer(n)
+    sim = Simulation(pc, xbound=(0,10), label='test_plot_show_save')
     sim.plot(show=True, save=True)
 
 
 def test_movie():
-    sim = mpitoy.Simulation(n=5)
+    n = 5
+    pc = ParticleContainer(n)
+    sim = Simulation(pc)
     sim.movie(nTimesteps=50)
 
 # ==============================================================================

@@ -15,34 +15,48 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from copy import copy
 
-class Simulation:
-    def __init__(self, n, xbound=None, label='None'):
+class ParticleContainer:
+    def __init__(self,n,radius=.5):
+        self.radius = radius
         # using 2 dimensions, X,Y
         shape = (2,n)
         self.x = np.zeros(shape)
         self.v = np.zeros(shape)
         self.a = np.zeros(shape)
-        self.radius = 0.5
         for i in range(n):
-            self.x[0,i] = i + self.radius # X-coordinate
+            self.x[0,i] = i + radius # X-coordinate
             self.v[0,i] = 0.1
-        self.x[1,:] = self.radius        # y-coordinate
+        self.x[1,:] = radius         # y-coordinate
+
+    def move(self, dt, nTimesteps):
+        for i in range(nTimesteps):
+            self.v += self.a * dt
+            self.x += self.v * dt
+
+
+class Simulation:
+    def __init__(self, pc=None, xbound=None, label='None', dt=1):
+        if pc is None:
+            self.pc = ParticleContainer(0)
+        else:
+            self.pc = pc
+        self.pcs = [pc]
+        # using 2 dimensions, X,Y
+        self.radius = 0.5
         self.t = 0
-        self.dt = 1
+        self.dt = dt
         self.xbound = xbound
         self.label = label
 
-    def move(self,nTimesteps=1):
-        for i in range(nTimesteps):
-            self.v += self.a * self.dt
-            self.x += self.v * self.dt
-            self.t += self.dt
-        # print(f"Simuation.move: {self.t=}")
+    def move(self,nTimesteps):
+        for pc in self.pcs:
+            pc.move(dt=self.dt, nTimesteps=nTimesteps)
+        self.t += nTimesteps*self.dt
 
 
     @property
     def n(self):
-        return self.x.shape[1]
+        return self.pc.x.shape[1]
 
     @property
     def diameter(self):
@@ -58,7 +72,7 @@ class Simulation:
 
         color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
         for i in range(n):
-            circle = plt.Circle(self.x[:,i], self.radius, color=next(color))
+            circle = plt.Circle(self.pc.x[:,i], self.radius, color=next(color))
             ax.add_patch(circle)
 
         title = copy(self.label)
@@ -82,7 +96,7 @@ class Simulation:
     def movie_update(self,frame):
         print(f'Simulation.movie_update {frame=}, t={self.t}')
         for i in range(self.n):
-            self.circles[i].center = self.x[:, i]
+            self.circles[i].center = self.pc.x[:, i]
         self.move(self.nTimestepsPerFrame)
         return []
 
@@ -99,7 +113,7 @@ class Simulation:
         self.circles = []
         color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
         for i in range(n):
-            circle = plt.Circle(self.x[:, i], self.radius, color=next(color))
+            circle = plt.Circle(self.pc.x[:, i], self.radius, color=next(color))
             self.ax.add_patch(circle)
             self.circles.append(circle)
 

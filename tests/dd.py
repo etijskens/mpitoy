@@ -23,6 +23,7 @@ print(f"dd3.py: process {rank} of {size} on {name}.\n")
 
 def main():
     """"""
+    # Every process makes his own simulation
     if rank == 0:
         n = 5
     else:
