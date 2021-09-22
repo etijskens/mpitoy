@@ -9,8 +9,74 @@ import numpy as np
 
 from mpitoy import Simulation, ParticleContainer, setColors
 import matplotlib.pyplot as plt
-
+import pytest
 setColors(5)
+
+def test_PC_init():
+    pc = ParticleContainer()
+    assert pc.capacity == 10
+    assert pc.size == 0
+    assert not pc.free
+    assert 'alive' in pc.arrays
+    assert pc.defval['alive'] == Fals
+    for i in range(pc.capacity):
+        assert pc.alive[i] == False
+
+def test_PC_add_remove():
+    pc = ParticleContainer()
+    with pytest.raises(RuntimeError):
+        pc.remove(5)
+
+    i = pc.add()
+    assert i == 0
+    assert pc.size == 1
+    assert pc.alive[i] == True
+    assert not pc.free
+
+    i = pc.add()
+    assert i == 1
+    assert pc.size == 2
+    assert pc.alive[i] == True
+    assert not pc.free
+
+    i = pc.add()
+    assert i == 2
+    assert pc.size == 3
+    assert pc.alive[i] == True
+    assert not pc.free
+
+    pc.remove(1)
+    assert pc.size == 2
+    assert pc.alive[1] == False
+    assert 1 in pc.free
+
+    i = pc.add()
+    assert i == 1
+    assert pc.size == 3
+    assert pc.alive[i] == True
+    assert not pc.free
+
+    for j in range(pc.capacity-pc.size):
+        i = pc.add()
+        assert pc.alive[i] == True
+    assert pc.capacity == pc.size
+    assert not pc.free
+
+    i = pc.add()
+    assert i == 10
+    assert pc.size == 11
+    assert pc.capacity == 12
+    assert pc.alive[i] == True
+    assert pc.alive[11] == False
+    assert not pc.free
+
+
+def test_PC_arrays():
+    pc = ParticleContainer()
+    pc.addArray('x', default_value=0)
+    for i in range(pc.capacity):
+        assert pc.alive[i] == False
+        assert pc.x[i] == 0
 
 def test_init():
     n = 5
@@ -69,7 +135,7 @@ def test_plot_show_save():
 # that the source directory is on the path
 # ==============================================================================
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_move
+    the_test_you_want_to_debug = test_PC_arrays
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
