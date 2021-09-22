@@ -12,7 +12,7 @@ sys.path.insert(0,'.')
 from mpi4py import MPI
 import numpy as np
 
-from mpitoy import Simulation, plt
+from mpitoy import Simulation, ParticleContainer,setColors
 
 
 size = MPI.COMM_WORLD.Get_size()
@@ -28,9 +28,11 @@ def main():
         n = 5
     else:
         n = 0
+    setColors(n)
+    pc = ParticleContainer(n)
 
-    xbound = (5*rank,5*(rank+1))
-    sim = Simulation(n, xbound=xbound, label=f"[{rank=}]")
+    xbound = (5*rank, 5*(rank+1))
+    sim = Simulation(pc, xbound=xbound, label=f"[{rank=}]")
     sim.plot(save=True)
 
     sendbuffer     = -np.ones((2,), dtype=float)
