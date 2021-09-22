@@ -16,6 +16,7 @@ def test_init():
         assert sim.x[0,i] == i+sim.radius
     assert sim.n == n
 
+
 def test_move():
     n = 5
     sim = mpitoy.Simulation(n)
@@ -28,10 +29,19 @@ def test_move():
 
 
 def test_plot():
-    sim = mpitoy.Simulation(n=5)
-    fig,ax = sim.plot()
-    sim.plot(fig,ax)
+    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot')
+    sim.plot()
     plt.show()
+
+
+def test_plot_show():
+    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot_show')
+    sim.plot(show=True)
+
+
+def test_plot_show_save():
+    sim = mpitoy.Simulation(n=5, xbound=(0,10), label='test_plot_show_save')
+    sim.plot(show=True, save=True)
 
 
 def test_movie():
@@ -45,7 +55,7 @@ def test_movie():
 # that the source directory is on the path
 # ==============================================================================
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_movie
+    the_test_you_want_to_debug = test_plot_show_save
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()

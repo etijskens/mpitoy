@@ -7,15 +7,16 @@ Package mpitoy
 Top-level package for mpitoy.
 """
 
+
 __version__ = "0.0.0"
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
+from copy import copy
 
 class Simulation:
-    def __init__(self,n):
+    def __init__(self, n, xbound=None, label='None'):
         # using 2 dimensions, X,Y
         shape = (2,n)
         self.x = np.zeros(shape)
@@ -28,6 +29,8 @@ class Simulation:
         self.x[1,:] = self.radius        # y-coordinate
         self.t = 0
         self.dt = 1
+        self.xbound = xbound
+        self.label = label
 
     def move(self,nTimesteps=1):
         for i in range(nTimesteps):
@@ -45,19 +48,31 @@ class Simulation:
     def diameter(self):
         return 2*self.radius
 
-    def plot(self,fig=None,ax=None):
+    def plot(self, show=False, save=False):
         n = self.n
-        if fig is None:
-            fig, ax = plt.subplots()
-            ax.set_aspect(1.0)
-            ax.set_xbound(0,2*n*self.diameter)
-            ax.set_ybound((0,self.diameter))
-            return fig,ax
-        else:
-            color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
-            for i in range(n):
-                circle = plt.Circle(self.x[:,i], self.radius, color=next(color))
-                ax.add_patch(circle)
+        fig, ax = plt.subplots()
+        ax.set_aspect(1.0)
+        ax.set_xbound(*self.xbound)
+        ax.set_ybound((0,self.diameter))
+
+
+        color = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
+        for i in range(n):
+            circle = plt.Circle(self.x[:,i], self.radius, color=next(color))
+            ax.add_patch(circle)
+
+        title = copy(self.label)
+        if title:
+            title = self.label + ', '
+        title += f't={self.t}'
+        plt.title(title)
+
+        if show:
+            plt.show()
+
+        if save and self.label:
+            print(f'Saving figure to {title}.png.')
+            plt.savefig(title+'.png')
 
 
     def movie_init(self):
@@ -97,3 +112,8 @@ class Simulation:
             , repeat=False
             )
         plt.show()
+
+
+# class DomainDecomposition:
+#     """Domain Decomposition: decmpose the space in slabs perpendicular to the X-axis"""
+#     def __init__(self, xrange=(0,10),nDomains=2):
