@@ -12,7 +12,7 @@ sys.path.insert(0,'.')
 from mpi4py import MPI
 import numpy as np
 
-from mpitoy import Simulation, ParticleContainer,setColors
+from mpitoy import *
 
 
 size = MPI.COMM_WORLD.Get_size()
@@ -25,29 +25,31 @@ def main():
     """"""
     ### setup ###
     # Every process makes his own simulation
+    N = 5
     if rank == 0:
-        n = 5
+        n = N
     else:
         n = 0
-    setColors(n)
-    pc = ParticleContainer(n)
 
-    xbound = (5*rank, 5*(rank+1))
-    sim = Simulation(pc, xbound=xbound, label=f"[{rank=}]")
+    setColors(5) # every process needs the same colors
+
+    spheres = Spheres(n)
+
+    xbound = (N*rank, N*(rank+1))
+    sim = Simulation(spheres, xbound=xbound, label=f"[{rank=}]")
     sim.plot(save=True)
 
     ### start time evolution ###
     while sim.t < 10:
         sim.move(dt=0.2)
-        for pc in sim.pcs:
-            movingOutLeft, movingOutRight = pc.findLeavingParticles(sim.xbound)
+        for spheres in sim.pcs:
+            movingOutLeft, movingOutRight = sim.findLeavingParticles(spheres)
+            if movingOutRight:
+                spheres_out = spheres.clone(movingOutRight, move=True, name='spheres_out')
+
             if movingOutLeft:
                 print(f'{movingOutLeft=}')
                 raise RuntimeError('oops')
-
-            if movingOutRight:
-
-                print(f'{movingOutRight=}')
 
         sim.plot(save=True)
 

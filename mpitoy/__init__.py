@@ -16,7 +16,10 @@ from matplotlib.animation import FuncAnimation
 from copy import copy
 
 class ParticleContainer:
-    def __init__(self, capacity=10):
+    def __init__(self, capacity=10, name=None):
+        if not name:
+            raise RuntimeError("Parameter 'name' is required.")
+        self.name = name
         self.capacity = max(10,capacity)# maximum number of particles the container can accomodate without growing
         self.growthFactor = 1.2         #
         self.size = 0                   # actual number of particles
@@ -96,9 +99,44 @@ class ParticleContainer:
         self.size += 1
         return i
 
+    def array2str(self, array_name, rnd=2, id=False):
+        a = self.arrays[array_name]
+        s = f'{self.name}.{array_name}[{"id" if id else ""}] =[ '
+        for i in range(self.capacity):
+            if self.alive[i]:
+                s += f'{self.id[i] if id else i}={round(a[i],rnd)}, '
+        s += ']'
+        return s
+
+    def clone(self, elements=[], move=False, verbose=False, name=None):
+        """Clone this ParticleContainer. The clone will have exactythe same arrays.
+        The array contents may differ: the elements in the elements list are copied
+        or moved, depending on the value of move. You can select all element by
+        setting elements='all'.
+        """
+        nm = f'{self.name}_clone' if not name else name
+        cloned = ParticleContainer(name=nm)
+        for name in self.arrays.keys():
+            cloned.addArray(name,self.defval[name])
+        for i in (range(self.capacity) if elements=='all' else elements):
+            if self.alive[i]:
+                j = cloned.addElement()
+                # copy element j for all arrays
+                for name, array in self.arrays.items():
+                    cloned.arrays[name][j] = array[i]
+                if move:
+                    self.remove(i)
+            else:
+                if verbose:
+                    print(f'clone() ignoring dead element ({i}).')
+        return cloned
+
+
+
 class Spheres(ParticleContainer):
-    def __init__(self,n):
-        super().__init__()
+    def __init__(self,n,name=None):
+        nm = 'spheres' if name is None else name
+        super().__init__(n,name=nm)
         radius = 0.5
         self.addArray('id', 0)
         self.addArray('radius', radius)
@@ -113,6 +151,7 @@ class Spheres(ParticleContainer):
             self.id[i] = i
             self.rx[i] = (1 + 2 * i) * radius
 
+
 def forward_euler(pc, dt=0.1, nTimesteps=1):
     for it in range(nTimesteps):
         for i in range(pc.capacity):
@@ -121,26 +160,6 @@ def forward_euler(pc, dt=0.1, nTimesteps=1):
                 pc.vy[i] += pc.ay[i]*dt
                 pc.rx[i] += pc.vx[i]*dt
                 pc.ry[i] += pc.vy[i]*dt
-
-def clone(pc, elements=[], move=False, verbose=False):
-    """Clone the ParticleContainer pc. The result will have the same arrays as pc. The elements
-    in the elements list are copied or moved, depending on the value of move.
-    """
-    cloned = ParticleContainer()
-    for name in pc.arrays.keys():
-        cloned.addArray(name,pc.defval[name])
-    for i in (range(pc.capacity) if elements=='all' else elements):
-        if pc.alive[i]:
-            j = cloned.addElement()
-            # copy element j for all arrays
-            for name, array in pc.arrays.items():
-                cloned.arrays[name][j] = array[i]
-            if move:
-                pc.remove(i)
-        else:
-            if verbose:
-                print(f'clone() ignoring dead element ({i}).')
-    return cloned
 
 COLORS = None
 def setColors(n):
@@ -176,19 +195,11 @@ class Simulation:
         ax.set_ybound(*self.ybound)
 
         for pc in self.pcs:
-            if not hasattr(pc,'shape'):
-                default_circle = plt.Circle((0,0), 0.5)
-                default_circle.set_visible(False)
-                pc.addArray('shape',default_value=default_circle)
             for i in range(pc.capacity):
                 if pc.alive[i]:
                     id = pc.id[i]
-                    circle = pc.shape[i]
-                    circle.center = (pc.rx[i], pc.ry[i])
-                    circle.set_color(COLORS[id])
-                    circle.set_visible(True)
+                    circle = plt.Circle((pc.rx[i], pc.ry[i]), pc.radius[i], color=COLORS[id])
                     ax.add_patch(circle)
-
         title = copy(self.label)
         if title:
             title = self.label + ', '
@@ -240,7 +251,15 @@ class Simulation:
             )
         plt.show()
 
+    def findLeavingParticles(self, pc):
+        movingOutLeft = []
+        movingOutright= []
+        for i in range(pc.capacity):
+            if pc.alive[i]:
+                # we check only the X-direction
+                if pc.rx[i] < self.xbound[0]:
+                    movingOutLeft.append(i)
+                elif self.xbound[1] <= pc.rx[i]:
+                    movingOutright.append(i)
+        return movingOutLeft, movingOutright
 
-# class DomainDecomposition:
-#     """Domain Decomposition: decmpose the space in slabs perpendicular to the X-axis"""
-#     def __init__(self, xrange=(0,10),nDomains=2):

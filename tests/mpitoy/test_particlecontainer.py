@@ -13,7 +13,7 @@ import pytest
 setColors(5)
 
 def test_PC_init():
-    pc = ParticleContainer()
+    pc = ParticleContainer(name='pc')
     assert pc.capacity == 10
     assert pc.size == 0
     assert not pc.free
@@ -23,7 +23,7 @@ def test_PC_init():
         assert pc.alive[i] == False
 
 def test_PC_add_remove():
-    pc = ParticleContainer()
+    pc = ParticleContainer(name='pc')
     with pytest.raises(RuntimeError):
         pc.remove(5)
 
@@ -76,7 +76,7 @@ def test_PC_add_remove():
     assert pc.x[i] == 0
 
 def test_PC_arrays():
-    pc = ParticleContainer()
+    pc = ParticleContainer(name='pc')
     pc.addArray('x', default_value=0)
     for i in range(pc.capacity):
         assert pc.alive[i] == False
@@ -90,7 +90,7 @@ def test_PC_arrays():
         pc.defval['x']
 
 
-def test_create_pc():
+def test_spheres():
     n = 5
     pc = Spheres(n)
     assert pc.size == n
@@ -104,10 +104,11 @@ def test_create_pc():
         assert pc.ax[i] == 0.0
         assert pc.vy[i] == 0.0
 
+
 def test_clone_empty():
     n = 5
     pc = Spheres(n)
-    cloned = clone(pc)
+    cloned = pc.clone()
     assert cloned.size == 0
     for name, array in pc.arrays.items():
         assert name in cloned.arrays
@@ -118,7 +119,7 @@ def test_clone_23():
     n = 5
     pc = Spheres(n)
     elements_to_copy = [2,3]
-    cloned = clone(pc, elements=elements_to_copy)
+    cloned = pc.clone(elements=elements_to_copy)
     assert cloned.size == len(elements_to_copy)
     for i in range(len(elements_to_copy)):
         j = elements_to_copy[i]
@@ -130,7 +131,7 @@ def test_clone_move23():
     pc = Spheres(n)
     elements_to_copy = [2,3]
     n_elements_to_copy = len(elements_to_copy)
-    cloned = clone(pc, elements=elements_to_copy, move=True)
+    cloned = pc.clone(elements=elements_to_copy, move=True)
 
     assert pc.size == n - n_elements_to_copy
     for i in range(pc.capacity):
@@ -150,15 +151,29 @@ def test_clone_all():
     n = 5
     pc = Spheres(n)
     elements_to_copy = 'all'
-    cloned = clone(pc, elements=elements_to_copy)
+    cloned = pc.clone(elements=elements_to_copy)
     assert cloned.size == pc.size
     for i in range(pc.size):
         assert cloned.id[i] == i
         assert cloned.vx[i] == pc.vx[i]
 
 
+def test_array2str():
+    spheres = Spheres(5)
+    spheres.id[3] = 2
+    spheres.id[2] = 3
+
+    s = spheres.array2str('rx')
+    print(s)
+    assert s == 'spheres.rx[] =[ 0=0.5, 1=1.5, 2=2.5, 3=3.5, 4=4.5, ]'
+
+    s = spheres.array2str('rx', id=True)
+    print(s)
+    assert s == 'spheres.rx[id] =[ 0=0.5, 1=1.5, 3=2.5, 2=3.5, 4=4.5, ]'
+
+
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_PC_add_remove
+    the_test_you_want_to_debug = test_array2str
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
