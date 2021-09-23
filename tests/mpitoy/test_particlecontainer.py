@@ -218,9 +218,19 @@ def tests_send_pc():
         assert data.name == 'spheres'
 
 
+def test_copyto():
+    spheres01 = Spheres(2)
+    spheres23 = Spheres(2)
+    spheres23.id[0] = 2
+    spheres23.id[1] = 3
+    spheres23.copyto(spheres01)
+    assert spheres01.size == 4
+    for i in range(4):
+        assert spheres01.id[i] == i
+
 
 if __name__ == "__main__":
-    the_test_you_want_to_debug = tests_send_pc
+    the_test_you_want_to_debug = test_copyto
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()

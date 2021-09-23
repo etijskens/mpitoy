@@ -131,7 +131,13 @@ class ParticleContainer:
                     print(f'clone() ignoring dead element ({i}).')
         return cloned
 
-
+    def copyto(self, pc):
+        """copy all elements to pc"""
+        for i in range(self.capacity):
+            if self.alive[i]:
+                j = pc.addElement()
+                for name,array in self.arrays.items():
+                    pc.arrays[name][j] = array[i]
 
 class Spheres(ParticleContainer):
     def __init__(self,n,name=None):

@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0,'.')
 
 from mpi4py import MPI
+comm = MPI.COMM_WORLD
 import numpy as np
 
 from mpitoy import *
@@ -17,6 +18,7 @@ from mpitoy import *
 
 size = MPI.COMM_WORLD.Get_size()
 rank = MPI.COMM_WORLD.Get_rank()
+last_rank = size-1
 name = MPI.Get_processor_name()
 
 print(f"dd3.py: process {rank} of {size} on {name}.\n")
@@ -46,6 +48,21 @@ def main():
             movingOutLeft, movingOutRight = sim.findLeavingParticles(spheres)
             if movingOutRight:
                 spheres_out = spheres.clone(movingOutRight, move=True, name='spheres_out')
+            else:
+                spheres_out = None
+
+            if rank < last_rank:
+                # i can send to the right
+                req_out = comm.isend(spheres_out, dest=rank+1)
+                req_out.wait()
+            if rank > 0:
+                # i can receive from the left
+                req_in = comm.irecv(source=rank-1)
+                spheres_in = req_in.wait()
+                print(f'{rank=}: {spheres_in=}')
+                if not spheres_in is None:
+                    spheres_in.copyto(spheres)
+                    print(f'{rank=}: {spheres.array2str("id")}.')
 
             if movingOutLeft:
                 print(f'{movingOutLeft=}')
