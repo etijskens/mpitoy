@@ -164,8 +164,7 @@ def forward_euler(pc, dt=0.1, nTimesteps=1):
 COLORS = None
 def setColors(n):
     global COLORS
-    print(type(plt.cm.rainbow(np.linspace(0, 1, n))))
-    COLORS = list(iter(plt.cm.rainbow(np.linspace(0, 1, n))))
+    COLORS = plt.cm.rainbow(np.linspace(0, 1, n))
 
 class Simulation:
     def __init__(self, pc, xbound=None, label=''):
