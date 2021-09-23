@@ -27,9 +27,40 @@ class ParticleContainer:
 
     def addArray(self, name: str, default_value=None):
         """Add an array to the particle container."""
-        setattr(self, name, self.capacity*[default_value])
+        contents = [ copy(default_value) for i in range(self.capacity)]
+        #   if default_value is mutable, we need copies, otherwise all elements
+        #   in the array will refer to the same object. If not, the copy doesn't harm.
+        setattr(self, name, contents)
         self.arrays[name] = getattr(self,name)
         self.defval[name] = default_value
+
+    def resetElement(self, array_name, i):
+        array = self.arrays[array_name]
+        array[i] = copy(self.defval[array_name])
+        #   if the default value is mutable, we need a copy, otherwise all elements
+        #   in the array will refer to the same object. If not, the copy doesn't harm.
+
+    def get_default_value(self, value, n=0):
+        """if value is mutable, we need to copy value"""
+        if n == 0:
+            # return a single value
+            if value in (int, float, bool, type(None),):
+                return value
+            else:
+                return copy(value)
+        else:
+            # return a list of n values
+            result = n*[value]
+            if not value in (int, float, bool, type(None),):
+                for i in range(n):
+                    result[i] = copy(value)
+            return result
+
+    def removeArray(self,name):
+        """remove an array from the particle container."""
+        delattr(self,name)
+        del self.arrays[name]
+        del self.defval[name]
 
     def grow(self):
         """Increase capacity"""
@@ -38,18 +69,21 @@ class ParticleContainer:
             n = self.capacity
 
         for name,array in self.arrays.items():
-            array.extend(n*[self.defval[name]])
+            array.extend([copy(self.defval[name]) for i in range(n)])
         self.capacity += n
 
-    def remove(self,i):
-        """Remove particle i"""
+    def remove(self, i, reset=False):
+        """Remove particle i. If reset is True, reset the i-th element of all arrays to its default value."""
         if not self.alive[i]:
            raise RuntimeError(f"Particle {i} is already removed.")
         self.alive[i] = False
         self.free.append(i)
         self.size -= 1
+        if reset:
+            for name,array in self.arrays.items():
+                array[i] = copy(self.defval[name])
 
-    def add(self):
+    def addElement(self):
         """Add a particle and return its index"""
         if self.size == self.capacity:
             self.grow()
@@ -62,47 +96,51 @@ class ParticleContainer:
         self.size += 1
         return i
 
-        #
-        # self.radius = radius
-        # # using 2 dimensions, X,Y
-        # shape = (2,n)
-        # self.x = np.zeros(shape)
-        # self.v = np.zeros(shape)
-        # self.a = np.zeros(shape)
-        # self.id = np.zeros((n,), dtype=int)
-        # for i in range(n):
-        #     self.x[0,i] = i + radius # X-coordinate
-        #     self.v[0,i] = 0.1
-        #     self.id[i]  = i
-        #
-        # self.x[1,:] = radius         # y-coordinate
-        #
+class Spheres(ParticleContainer):
+    def __init__(self,n):
+        super().__init__()
+        radius = 0.5
+        self.addArray('id', 0)
+        self.addArray('radius', radius)
+        self.addArray('rx')
+        self.addArray('ry', radius)
+        self.addArray('vx', 0.1)
+        self.addArray('vy', 0.0)
+        self.addArray('ay', 0.0)
+        self.addArray('ax', 0.0)
+        for j in range(n):
+            i = self.addElement()
+            self.id[i] = i
+            self.rx[i] = (1 + 2 * i) * radius
 
+def forward_euler(pc, dt=0.1, nTimesteps=1):
+    for it in range(nTimesteps):
+        for i in range(pc.capacity):
+            if pc.alive[i]:
+                pc.vx[i] += pc.ax[i]*dt
+                pc.vy[i] += pc.ay[i]*dt
+                pc.rx[i] += pc.vx[i]*dt
+                pc.ry[i] += pc.vy[i]*dt
 
-
-    # def move(self, dt, nTimesteps):
-    #     for i in range(nTimesteps):
-    #         self.v += self.a * dt
-    #         self.x += self.v * dt
-    #
-
-    # def findLeavingParticles(self,xbound):
-    #     # we only check the X-boudaries
-    #     movingOutLeft = []
-    #     movingOutRght = []
-    #
-    #     for i in range(self.n):
-    #         if self.x[0,i] < xbound[0]:
-    #             movingOutLeft.append(i)
-    #         if xbound[1] <= self.x[0,i]:
-    #             movingOutRght.append(i)
-    #     return movingOutLeft, movingOutRght
-
-
-    # def remove(self, i):
-    #     """remove particle i"""
-    #     if not hasattr(self, 'alive'):
-    #         self.alive = np.ones((self.n,),dtype=bool)
+def clone(pc, elements=[], move=False, verbose=False):
+    """Clone the ParticleContainer pc. The result will have the same arrays as pc. The elements
+    in the elements list are copied or moved, depending on the value of move.
+    """
+    cloned = ParticleContainer()
+    for name in pc.arrays.keys():
+        cloned.addArray(name,pc.defval[name])
+    for i in (range(pc.capacity) if elements=='all' else elements):
+        if pc.alive[i]:
+            j = cloned.addElement()
+            # copy element j for all arrays
+            for name, array in pc.arrays.items():
+                cloned.arrays[name][j] = array[i]
+            if move:
+                pc.remove(i)
+        else:
+            if verbose:
+                print(f'clone() ignoring dead element ({i}).')
+    return cloned
 
 COLORS = None
 def setColors(n):
@@ -111,38 +149,45 @@ def setColors(n):
     COLORS = list(iter(plt.cm.rainbow(np.linspace(0, 1, n))))
 
 class Simulation:
-    def __init__(self, pc=None, xbound=None, label=''):
-        if pc is None:
-            self.pc = ParticleContainer(0)
-        else:
-            self.pc = pc
+    def __init__(self, pc, xbound=None, label=''):
         self.pcs = [pc]
-        # using 2 dimensions, X,Y
         self.t = 0
+        radius = pc.radius[0] # assuming all particles have the same radius
         if xbound:
             self.xbound = xbound
         else:
-            self.xbound = (0, pc.n*2*pc.radius)
-        self.ybound = (0,2*pc.radius)
+            self.xbound = (0, pc.size * 2*radius)
+        self.ybound = (0,2*radius)
         self.label = label
+
 
     def move(self,dt=0.1, nTimesteps=1):
         for pc in self.pcs:
-            pc.move(dt=dt, nTimesteps=nTimesteps)
+            forward_euler(pc, dt=dt, nTimesteps=nTimesteps)
         self.t += nTimesteps*dt
 
 
     def plot(self, show=False, save=False):
-        plt.close()
+        plt.close() # close previous figure if any.
+
         fig, ax = plt.subplots()
         ax.set_aspect(1.0)
         ax.set_xbound(*self.xbound)
         ax.set_ybound(*self.ybound)
+
         for pc in self.pcs:
-            for i in range(pc.n):
-                id = pc.id[i]
-                circle = plt.Circle(pc.x[:,i], pc.radius, color=COLORS[id])
-                ax.add_patch(circle)
+            if not hasattr(pc,'shape'):
+                default_circle = plt.Circle((0,0), 0.5)
+                default_circle.set_visible(False)
+                pc.addArray('shape',default_value=default_circle)
+            for i in range(pc.capacity):
+                if pc.alive[i]:
+                    id = pc.id[i]
+                    circle = pc.shape[i]
+                    circle.center = (pc.rx[i], pc.ry[i])
+                    circle.set_color(COLORS[id])
+                    circle.set_visible(True)
+                    ax.add_patch(circle)
 
         title = copy(self.label)
         if title:
