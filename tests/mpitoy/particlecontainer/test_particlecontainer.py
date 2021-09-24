@@ -20,6 +20,7 @@ def test_PC_init():
     for i in range(pc.capacity):
         assert pc.alive[i] == False
 
+
 def test_PC_add_remove():
     pc = ParticleContainer(name='pc')
     with pytest.raises(RuntimeError):

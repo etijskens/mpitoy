@@ -8,6 +8,7 @@ A submodule for the ParticleContainer class
 """
 from copy import copy
 
+
 class ParticleArray(list):
     """Particle arrays behave as plain Python lists. In addition they store the
 

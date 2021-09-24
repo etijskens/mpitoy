@@ -3,13 +3,15 @@
 import sys
 sys.path.insert(0,'.')
 
-
 """Tests for mpitoy package."""
 import numpy as np
 
 from mpitoy import *
+from mpitoy.simulation import setColors, Simulation
+
+
 n = 5
-setColors(5)
+setColors(n)
 
 import matplotlib.pyplot as plt
 import pytest

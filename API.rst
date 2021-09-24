@@ -8,3 +8,7 @@ API
 .. automodule:: mpitoy.particlecontainer
    :members:
 
+
+.. automodule:: mpitoy.simulation
+   :members:
+
