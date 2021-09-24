@@ -3,29 +3,27 @@
 import sys
 sys.path.insert(0,'.')
 
-
 """Tests for mpitoy package."""
-import numpy as np
 
-from mpitoy import *
-import matplotlib.pyplot as plt
+from mpitoy.particlecontainer import ParticleContainer,ParticleArray
+from mpitoy import Spheres
+
 import pytest
-setColors(5)
 
 def test_PC_init():
     pc = ParticleContainer(name='pc')
     assert pc.capacity == 10
     assert pc.size == 0
     assert not pc.free
-    assert 'alive' in pc.arrays
-    assert pc.defval['alive'] == False
+    assert hasattr(pc, 'alive')
+    assert pc.alive.defaultValue == False
     for i in range(pc.capacity):
         assert pc.alive[i] == False
 
 def test_PC_add_remove():
     pc = ParticleContainer(name='pc')
     with pytest.raises(RuntimeError):
-        pc.remove(5)
+        pc.kill(5)
 
     i = pc.addElement()
     assert i == 0
@@ -45,7 +43,7 @@ def test_PC_add_remove():
     assert pc.alive[i] == True
     assert not pc.free
 
-    pc.remove(1)
+    pc.kill(1)
     assert pc.size == 2
     assert pc.alive[1] == False
     assert 1 in pc.free
@@ -70,14 +68,14 @@ def test_PC_add_remove():
     assert pc.alive[11] == False
     assert not pc.free
 
-    pc.addArray('x',default_value=0)
+    pc.addArray('x',defaultValue=0)
     pc.x[i] = 10
-    pc.remove(i,reset=True)
+    pc.kill(i,reset=True)
     assert pc.x[i] == 0
 
 def test_PC_arrays():
     pc = ParticleContainer(name='pc')
-    pc.addArray('x', default_value=0)
+    pc.addArray('x', defaultValue=0)
     for i in range(pc.capacity):
         assert pc.alive[i] == False
         assert pc.x[i] == 0
@@ -86,8 +84,6 @@ def test_PC_arrays():
         print(pc.x[0])
     with pytest.raises(KeyError):
         pc.arrays['x']
-    with pytest.raises(KeyError):
-        pc.defval['x']
 
 
 def test_spheres():
@@ -228,9 +224,16 @@ def test_copyto():
     for i in range(4):
         assert spheres01.id[i] == i
 
+def test_ParticleArray_init():
+    pc = ParticleContainer(name='pc')
+    pa = ParticleArray(pc, defaultValue=0, name='pa')
+    print(f"{pa=}")
+    assert pa == pc.capacity * [0]
+    for i in range(pc.capacity):
+        assert pa[i] == 0
 
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_copyto
+    the_test_you_want_to_debug = test_PC_add_remove
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
