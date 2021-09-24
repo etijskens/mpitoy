@@ -10,7 +10,7 @@ A submodule for ...
 
 import matplotlib.pyplot as plt
 import numpy as np
-from copy import copy   
+from copy import copy
 
 
 COLORS = None

@@ -12,3 +12,7 @@ API
 .. automodule:: mpitoy.simulation
    :members:
 
+
+.. automodule:: mpitoy.domainboundary
+   :members:
+

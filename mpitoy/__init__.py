@@ -8,7 +8,9 @@ Top-level package for mpitoy.
 """
 
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
+
+import mpitoy.domainboundary
 
 import mpitoy.simulation
 
@@ -27,10 +29,13 @@ class Spheres(mpitoy.particlecontainer.ParticleContainer):
         self.addArray('radius', radius)
         self.addArray('rx')
         self.addArray('ry', radius)
+        self.addArray('rz', radius)
         self.addArray('vx', 0.1)
         self.addArray('vy', 0.0)
+        self.addArray('vz', 0.0)
         self.addArray('ay', 0.0)
         self.addArray('ax', 0.0)
+        self.addArray('az', 0.0)
         for j in range(n):
             i = self.addElement()
             self.id[i] = i

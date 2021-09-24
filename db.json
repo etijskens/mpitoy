@@ -60,5 +60,36 @@
     },
     "API.rst": "\n.. automodule:: mpitoy.simulation\n   :members:\n\n",
     "mpitoy/__init__.py": "\nimport mpitoy.simulation"
+  },
+  "domainboundary": {
+    "context": {
+      "verbosity": 1,
+      "project_path": "/Users/etijskens/software/dev/workspace/mpitoy",
+      "default_project_path": true,
+      "clear_log": false,
+      "_cfg_filename": "micc3.cfg",
+      "_cfg_dir": "/Users/etijskens/.micc2",
+      "invoked_subcommand": "add",
+      "overwrite_preferences": {},
+      "add_name": "domainboundary",
+      "flag_cli": false,
+      "flag_clisub": false,
+      "flag_py": true,
+      "flag_f90": false,
+      "flag_cpp": false,
+      "overwrite": false,
+      "backup": false,
+      "package_name": "mpitoy",
+      "module_location_relative": ".",
+      "module_name": "domainboundary",
+      "module_srcdir": "mpitoy/domainboundary",
+      "import_lib": "mpitoy.domainboundary",
+      "templates": [
+        "submodule-py",
+        "submodule-py-test"
+      ]
+    },
+    "API.rst": "\n.. automodule:: mpitoy.domainboundary\n   :members:\n\n",
+    "mpitoy/__init__.py": "\nimport mpitoy.domainboundary"
   }
 }
