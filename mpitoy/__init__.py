@@ -10,7 +10,7 @@ Top-level package for mpitoy.
 
 __version__ = "0.1.0"
 
-import mpitoy.domainboundary
+import mpitoy.domaindecomposition
 
 import mpitoy.simulation
 

@@ -1,28 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import sys
+sys.path.insert(0,'.')
 """Tests for sub-module mpitoy.domainboundary."""
-import numpy as np
 import pytest
-from mpitoy.domainboundary import Plane, ParallelBoundaries
-from copy import copy
+from mpitoy.domaindecomposition import BoundaryPlane, ParallelSlabs
 
 def test_plane():
-    plane = Plane([5.,0.,0.], [-1.,0.,0.])
-    assert plane.locate([4, 0, 0]) >  0
-    assert plane.locate([5, 0, 0]) == 0
-    assert plane.locate([6, 0, 0]) <  0
+    plane = BoundaryPlane([5., 0., 0.], [-1., 0., 0.])
+    assert plane.distance([4, 0, 0]) > 0
+    assert plane.distance([5, 0, 0]) == 0
+    assert plane.distance([6, 0, 0]) < 0
 
 
 def test_ParallelBoundaries():
-    boundaries = ParallelBoundaries([[1,0,0], [2,0,0]], [1,0,0])
+    boundaries = ParallelSlabs([[1, 0, 0], [2, 0, 0]], [1, 0, 0])
     assert boundaries.size == 2
 
 @pytest.mark.mpi(min_size=3)
 def test_DomainDecompositionParallel():
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
-    domain = ParallelBoundaries( [[1,0,0], [2,0,0]], n=[1,0,0] )
+    domain = ParallelSlabs([[1, 0, 0], [2, 0, 0]], n=[1, 0, 0])
     myBoundaries = domain.decompose(comm)
     for b in myBoundaries:
         b.prnt(comm)

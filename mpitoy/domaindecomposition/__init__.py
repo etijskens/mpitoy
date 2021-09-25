@@ -11,8 +11,22 @@ A submodule for ...
 import numpy as np
 from copy import copy
 
-class Plane:
-	"""Class for representing a plane """
+class BoundaryPlane:
+	"""Class for representing a boundary plane.
+
+	The class stores a point on the plane (self.p), and the normal to the plane (self.n).
+
+	The domain defined by the plane is the half space lying in the direction of the normal,
+	i.e. the inside. The outside is the half space at the opposite side of the normal direction.
+	The domain defined by a set of planes is the intersection of the insides of all the planes.
+
+	The distance(q) method returns the **signed** distance of q to the plane:
+
+	* if zero, q is on the plane
+	* if > 0, q is inside the domain, i.e. in the half space lying in the direction of the normal.
+	* if < 0  q is outside the domain, i.e. in the half space lying at the opposite direction of
+	  the normal.
+	"""
 	def __init__(self, p, a, b=None):
 		"""
 		:param p: point p in the plane
@@ -30,10 +44,16 @@ class Plane:
 
 	def __str__(self):
 		return f"p={self.p}, n={self.n}, me={self.me}, nb={self.nb}"
+
 	def prnt(self,comm):
+		"""
+		MPI communicator
+		:param comm:
+		:return:
+		"""
 		print(f"{comm.rank=}: p={self.p}, n={self.n}, me={self.me}, nb={self.nb}")
 
-	def locate(self,q):
+	def distance(self, q):
 		"""Locate position of point q relative to the plane.
 
 		:param q: point to locate relative to the plane
@@ -43,7 +63,8 @@ class Plane:
 		"""
 		return np.dot(q-self.p,self.n)
 
-class ParallelBoundaries:
+class ParallelSlabs:
+	""""""
 	def __init__(self,points,n):
 		"""
 
@@ -59,7 +80,7 @@ class ParallelBoundaries:
 		for i,p in enumerate(points):
 			points[i] = np.array(p)
 		for p in points:
-			plane = Plane(p,n)
+			plane = BoundaryPlane(p, n)
 			boundaries.append(plane)
 			dot.append(np.dot(p-points[0],n))
 		dot_sorted = sorted(dot)
