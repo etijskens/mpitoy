@@ -27,16 +27,14 @@ class BoundaryPlane:
 	* if < 0  q is outside the domain, i.e. in the half space lying at the opposite direction of
 	  the normal.
 	"""
-	def __init__(self, p, a, b=None):
+	def __init__(self, p, n=None):
 		"""
 		:param p: point p in the plane
-		:param a: vector in plane
-		:param b: vector in plane not // a. if b==None, a is the normal vector
+		:param n: normal vector of the plane
 		"""
-		self.p = np.array(p)	# compute the normal vector of the plane
-		self.n = a if b is None else np.cross(a,b)
-		# Normalize
-		self.n /= np.sqrt(np.dot(self.n,self.n))
+		self.p = np.array(p)
+		self.n = n / np.sqrt(np.dot(n, n)) # normalize
+
 		# These are the ranks of the processes that correspond a positive location(), resp. a negative location()
 		# These must be initiolized by the domain composition
 		self.me = None # the rank responsible for points inside the domain (positive location)
@@ -63,11 +61,28 @@ class BoundaryPlane:
 		"""
 		return np.dot(q-self.p,self.n)
 
+	def findGhostParticles(self, pc, ghostWidth=None):
+		"""Find the particles that need to be ghosted. Returns a list of indexes of particles in pc
+		for which the distance to this BoundaryPlane is in [-ghostWidht,0].
+
+		It is assumed that all particles of pc are outside the domain of this BoundaryPlane.
+		"""
+		signedGhostWidth = -ghostWidth if ghostWidth > 0 else ghostWidth
+		toBeGhosted = []
+		for i in range(pc.capacity):
+			if pc.alive[i]:
+				pi = np.array([pc.rx[i],pc.ry[i],pc.rz[i]])
+				di = self.distance(pi)
+				if di >= signedGhostWidth:
+					if di > 0:
+						raise RuntimeError(f'Particle {pc.name}.[{i}] is inside domain ({self.me}).')
+					toBeGhosted.append(i)
+		return toBeGhosted
+
 class ParallelSlabs:
 	""""""
 	def __init__(self,points,n):
 		"""
-
 		:param points: list of successive points located on the respective boundary planes.
 		:param n: normal vector of all planes.
 
@@ -89,12 +104,21 @@ class ParallelSlabs:
 		self.boundaries = boundaries
 
 
-
 	def decompose(self,comm):
-		"""return the boundaries for the current rank"""
-		myBoundaries = []
+		"""Return a list of BoundaryPlanes for the current rank. The normals of the
+		BoundaryPlanes are such that they define a slab for the current rank.
+
+		for n+1 ranks we have:
+
+		rank 0 | rank 1 | rank 2 |  ...  | rank n
+		      BP0      BP1      BP2	   BPn-1
+
+		If there are more BoundaryPlanes than ranks, they are not used.
+		If there are too little, you get IndexError.
+		"""
+		myBoundaryPlanes = []
 		if comm.size <= 0:
-			return myBoundaries
+			return myBoundaryPlanes
 
 		rank = comm.rank
 		if rank == 0:
@@ -103,14 +127,14 @@ class ParallelSlabs:
 			b.me = rank
 			b.nb = rank+1
 			b.n *= -1 # have normal point inward
-			myBoundaries.append(b)
+			myBoundaryPlanes.append(b)
 
 		elif rank == comm.size - 1:
 			# Last domain, has only boundary with lower rank
 			b = copy(self.boundaries[rank-1])
 			b.me = rank
 			b.nb = rank-1
-			myBoundaries.append(b)
+			myBoundaryPlanes.append(b)
 
 		else:
 			# Interior domains have two boundaries, with higher and lower rank
@@ -118,15 +142,15 @@ class ParallelSlabs:
 			b = copy(self.boundaries[rank-1])
 			b.me = rank
 			b.nb = rank-1
-			myBoundaries.append(b)
+			myBoundaryPlanes.append(b)
 			# higher rank
 			b = copy(self.boundaries[rank])
 			b.me = rank
 			b.nb = rank+1
 			b.n *= -1 # have normal point inward
-			myBoundaries.append(b)
+			myBoundaryPlanes.append(b)
 
-		return myBoundaries
+		return myBoundaryPlanes
 
 	@property
 	def size(self):
