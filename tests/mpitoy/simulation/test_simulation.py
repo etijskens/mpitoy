@@ -31,16 +31,16 @@ def test_move():
 def test_plot():
     n = 5
     pc = Spheres(n)
-    sim = Simulation(pc, xbound=(0,10), label='test_plot')
-    sim.plot()
+    sim = Simulation(pc, name='test_plot')
+    sim.plot(xbound=(0,10), ybound=(0,1))
     plt.show()
 
 
 def test_plot_twice():
     n = 5
     pc = Spheres(n)
-    sim = Simulation(pc, xbound=(0,10), label='test_plot')
-    sim.plot(save=True)
+    sim = Simulation(pc, name='test_plot')
+    sim.plot(xbound=(0,10), ybound=(0,1), save=True)
     sim.move(dt=1)
     sim.plot(save=True)
 
@@ -48,38 +48,15 @@ def test_plot_twice():
 def test_plot_show():
     n = 5
     pc = Spheres(n)
-    sim = Simulation(pc, xbound=(0,10), label='test_plot_show')
-    sim.plot(show=True)
+    sim = Simulation(pc, name='test_plot_show')
+    sim.plot(xbound=(0,10), ybound=(0,1), show=True)
 
 
 def test_plot_show_save():
     n = 5
     pc = Spheres(n)
-    sim = Simulation(pc, xbound=(0,10), label='test_plot_show_save')
-    sim.plot(show=True, save=True)
-
-
-def test_findLeavingParticles():
-    n = 2
-    spheres = Spheres(n)
-    sim = Simulation(spheres, xbound=(0,2), label='test_plot_show_save')
-    while spheres.rx[1] < 2.02:
-        sim.move(dt = 0.2)
-        print(f"t={round(sim.t,4)}, {spheres.rx=}")
-        outleft,outright = sim.findLeavingParticles(spheres)
-        if outright:
-            assert 1 in outright
-            print(f'{outright=}')
-            assert spheres.alive[1]
-            assert spheres.id[1] == 1
-            print('before clone:', spheres.array2str('rx',id=True))
-            spheres_out = spheres.clone(outright, move=True, name='spheres_out')
-            print(' after clone:', spheres.array2str('rx',id=True))
-            print(' after clone:', spheres_out.array2str('rx',id=True))
-            assert not spheres.alive[1]
-            assert spheres_out.id[0] == 1
-            break
-
+    sim = Simulation(pc, name='test_plot_show_save')
+    sim.plot(xbound=(0,10), ybound=(0,1), show=True, save=True)
 
 
 # def test_movie():

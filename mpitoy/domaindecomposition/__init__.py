@@ -61,6 +61,18 @@ class BoundaryPlane:
 		"""
 		return np.dot(q-self.p,self.n)
 
+	def findLeavingParticles(self, pc):
+		"""Find the particles that are outside the domain."""
+		outside = []
+		for i in range(pc.capacity):
+			if pc.alive[i]:
+				pi = np.array([pc.rx[i],pc.ry[i],pc.rz[i]])
+				di = self.distance(pi)
+				if di > 0:
+					outside.append(i)
+		return outside
+
+
 	def findGhostParticles(self, pc, ghostWidth=None):
 		"""Find the particles that need to be ghosted. Returns a list of indexes of particles in pc
 		for which the distance to this BoundaryPlane is in [-ghostWidht,0].

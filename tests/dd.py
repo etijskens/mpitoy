@@ -13,7 +13,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 import numpy as np
 
-from mpitoy import *
+from mpitoy.simulation import setColors
 
 
 size = MPI.COMM_WORLD.Get_size()

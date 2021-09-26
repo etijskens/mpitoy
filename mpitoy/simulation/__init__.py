@@ -28,16 +28,12 @@ def forward_euler(pc, dt=0.1, nTimesteps=1):
                 pc.ry[i] += pc.vy[i]*dt
 
 class Simulation:
-    def __init__(self, pc, xbound=None, label=''):
+    def __init__(self, pc, domainBoundaries=None, name=''):
         self.pcs = [pc]
         self.t = 0
         radius = pc.radius[0] # assuming all particles have the same radius
-        if xbound:
-            self.xbound = xbound
-        else:
-            self.xbound = (0, pc.size * 2*radius)
-        self.ybound = (0,2*radius)
-        self.label = label
+        self.domainBoundaries = domainBoundaries
+        self.name = name
 
 
     def move(self,dt=0.1, nTimesteps=1):
@@ -46,13 +42,15 @@ class Simulation:
         self.t += nTimesteps*dt
 
 
-    def plot(self, show=False, save=False):
+    def plot(self, show=False, save=False, xbound=None, ybound=None):
         plt.close() # close previous figure if any.
 
         fig, ax = plt.subplots()
         ax.set_aspect(1.0)
-        ax.set_xbound(*self.xbound)
-        ax.set_ybound(*self.ybound)
+        if xbound:
+            ax.set_xbound(*xbound)
+        if ybound:
+            ax.set_ybound(*ybound)
 
         for pc in self.pcs:
             for i in range(pc.capacity):
@@ -60,16 +58,16 @@ class Simulation:
                     id = pc.id[i]
                     circle = plt.Circle((pc.rx[i], pc.ry[i]), pc.radius[i], color=COLORS[id])
                     ax.add_patch(circle)
-        title = copy(self.label)
+        title = copy(self.name)
         if title:
-            title = self.label + ', '
+            title = self.name + ', '
         title += f't={round(self.t,2)}'
         plt.title(title)
 
         if show:
             plt.show()
 
-        if save and self.label:
+        if save and self.name:
             print(f'Saving figure to {title}.png.')
             plt.savefig(title+'.png')
 
@@ -111,17 +109,6 @@ class Simulation:
     #         )
     #     plt.show()
 
-    def findLeavingParticles(self, pc):
-        movingOutLeft = []
-        movingOutright= []
-        for i in range(pc.capacity):
-            if pc.alive[i]:
-                # we check only the X-direction
-                if pc.rx[i] < self.xbound[0]:
-                    movingOutLeft.append(i)
-                elif self.xbound[1] <= pc.rx[i]:
-                    movingOutright.append(i)
-        return movingOutLeft, movingOutright
 
     # def findGhostParticles(self, xBound, ghostWidth):
     #     for i in range(self.capacity):

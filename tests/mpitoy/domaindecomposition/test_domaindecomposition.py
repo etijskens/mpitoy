@@ -5,6 +5,7 @@ sys.path.insert(0,'.')
 """Tests for sub-module mpitoy.domainboundary."""
 import pytest
 from mpitoy.domaindecomposition import BoundaryPlane, ParallelSlabs
+from mpitoy.simulation import setColors, Simulation
 from mpitoy import Spheres
 
 def test_plane():
@@ -19,15 +20,11 @@ def test_ParallelSlabs():
     assert boundaries.size == 2
 
 
-@pytest.mark.mpi(min_size=3)
-def test_DomainDecompositionParallel():
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    domain = ParallelSlabs([[1, 0, 0], [2, 0, 0]], n=[1, 0, 0])
-    myBoundaries = domain.decompose(comm)
-    for b in myBoundaries:
-        b.prnt(comm)
-
+def test_findLeavingParticles():
+    spheres = Spheres(2)
+    bp = BoundaryPlane(p=[1,0,0],n=[1,0,0])
+    outside = bp.findLeavingParticles(spheres)
+    assert outside == [1]
 
 def test_findGhostParticles():
     spheres = Spheres(5)
@@ -37,8 +34,7 @@ def test_findGhostParticles():
 
 
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_findGhostParticles
-
+    the_test_you_want_to_debug = test_findLeavingParticles
     the_test_you_want_to_debug()
     print("-*# finished #*-")
 # ==============================================================================
