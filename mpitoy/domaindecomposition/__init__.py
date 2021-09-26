@@ -40,6 +40,22 @@ class BoundaryPlane:
 		self.me = None # the rank responsible for points inside the domain (positive location)
 		self.nb = None # the rank responsible for points crossing this domain boundary (negative location)
 
+	def send_tag(self):
+		"""Compose a tag from the sender and the receiver rank. If you send with tag=send_tag() you must
+		receive with tag=recv_tag().
+
+		:return: int
+		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
+		"""
+		return 1000*self.me + self.nb # this is readable for <= 1000 mpi processes.
+
+	def recv_tag(self):
+		"""
+		:return: int, a tag that is composed for
+		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
+		"""
+		return 1000*self.nb + self.me # this is readable for <= 1000 mpi processes.
+
 	def __str__(self):
 		return f"p={self.p}, n={self.n}, me={self.me}, nb={self.nb}"
 
@@ -61,16 +77,47 @@ class BoundaryPlane:
 		"""
 		return np.dot(q-self.p,self.n)
 
-	def findLeavingParticles(self, pc):
-		"""Find the particles that are outside the domain."""
-		outside = []
+	def findLeavingParticles(self, pc, comm=None, verbose=False):
+		"""Find the particles in particle container pc that are outside the domain.
+
+		if a communicator is provided, the pc sends the leaving particles from this domain, to pc in the neighbouring
+		domain and receives the leaving particles from pc in the neighbouring domain. If a communicator is provided,
+		this function must be called on all ranks.
+		"""
+		outgoing = []
+		if verbose:
+			print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
 		for i in range(pc.capacity):
 			if pc.alive[i]:
 				pi = np.array([pc.rx[i],pc.ry[i],pc.rz[i]])
 				di = self.distance(pi)
-				if di > 0:
-					outside.append(i)
-		return outside
+				if di < 0:
+					outgoing.append(i)
+		if comm:
+			if outgoing:
+				# move the leaving particles to a clone
+				pc_outgoing = pc.clone(elements=outgoing, move=True)
+				if verbose:
+					outgoing_elements = [pc.id[i] for i in outgoing]
+					print(f"rank{comm.rank} sending particles {outgoing_elements}")
+					print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+			else:
+				pc_outgoing = None
+			#send the clone to the neighbouring domain:
+			req_outgoing = comm.isend(pc_outgoing, dest=self.nb, tag=self.send_tag())
+			req_outgoing.wait()
+			# Receive leaving particles from the neighbouring domain
+			req_incoming = comm.irecv(source=self.nb, tag=self.recv_tag())
+			pc_incoming = req_incoming.wait()
+			if not pc_incoming is None:
+				if verbose:
+					incoming_elements = [pc_incoming.id[i] for i in range(pc_incoming.capacity) if pc_incoming.alive[i]]
+					print(f"rank{comm.rank} receiving particles {incoming_elements}")
+				pc_incoming.copyto(pc)
+				if verbose:
+					print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+
+		return outgoing
 
 
 	def findGhostParticles(self, pc, ghostWidth=None):
