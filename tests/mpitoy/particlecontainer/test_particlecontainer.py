@@ -188,8 +188,15 @@ def test_ParticleArray_init():
     for i in range(pc.capacity):
         assert pa[i] == 0
 
+
+def test_ParticleContainer_id():
+    pc1 = ParticleContainer(name='pc1')
+    pc2 = ParticleContainer(name='pc2')
+    assert pc1.id == 1
+    assert pc2.id == 2
+
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_array2str
+    the_test_you_want_to_debug = test_ParticleContainer_id
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()

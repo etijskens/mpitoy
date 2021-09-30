@@ -69,6 +69,7 @@ class ParticleArray(list):
 
 class ParticleContainer:
     """Base class for particle containers"""
+    id = 0
     def __init__(self, capacity=10, name=None):
         if not name:
             raise RuntimeError("Parameter 'name' is required.")
@@ -80,7 +81,8 @@ class ParticleContainer:
         ParticleArray(self, name='alive', defaultValue=False)
                                         # only particles for which alive[i]==True exist
         self.free = []                  # list of free elements. if empty the next free element is given by self.size
-
+        ParticleContainer.id += 1
+        self.id = ParticleContainer.id # used for tagging MPI messages
 
     def addArray(self, name: str, defaultValue=None): # deprecated, use ParticleArray.__init__() instead.
         """Add an array to the particle container."""
