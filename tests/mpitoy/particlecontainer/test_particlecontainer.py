@@ -160,13 +160,14 @@ def test_array2str():
     spheres.id[3] = 2
     spheres.id[2] = 3
 
-    s = spheres.array2str('rx')
-    print(s)
-    assert s == 'spheres.rx[] =[ 0=0.5, 1=1.5, 2=2.5, 3=3.5, 4=4.5, ]'
+    sid = f'{spheres.id}'
+    srx = str(spheres.rx)
 
-    s = spheres.array2str('rx', id=True)
-    print(s)
-    assert s == 'spheres.rx[id] =[ 0=0.5, 1=1.5, 3=2.5, 2=3.5, 4=4.5, ]'
+    print(sid)
+    print(srx)
+
+    assert sid == 'spheres.id = [0, 1, 3, 2, 4]'
+    assert srx == 'spheres.rx = [0.5, 1.5, 2.5, 3.5, 4.5]'
 
 
 def test_copyto():
@@ -188,7 +189,7 @@ def test_ParticleArray_init():
         assert pa[i] == 0
 
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_PC_add_remove
+    the_test_you_want_to_debug = test_array2str
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()

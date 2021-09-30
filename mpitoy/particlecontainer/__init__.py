@@ -63,6 +63,9 @@ class ParticleArray(list):
         del self.pc.arrays[self.name]
         self.pc = None
 
+    def __str__(self):
+        return f"{self.pc.name}.{self.name} = {list([self[i] for i in range(self.pc.capacity) if self.pc.alive[i]])}"
+
 
 class ParticleContainer:
     """Base class for particle containers"""
@@ -130,16 +133,16 @@ class ParticleContainer:
         self.size += 1
         return i
 
-    def array2str(self, array_name, rnd=2, id=False):
-        """For pretty printing.
-        """
-        a = self.arrays[array_name]
-        s = f'{self.name}.{array_name}[{"id" if id else ""}] =[ '
-        for i in range(self.capacity):
-            if self.alive[i]:
-                s += f'{self.id[i] if id else i}={round(a[i],rnd)}, '
-        s += ']'
-        return s
+    # def array2str(self, array_name, rnd=2, id=False):
+    #     """For pretty printing.
+    #     """
+    #     a = self.arrays[array_name]
+    #     s = f'{self.name}.{array_name}[{"id" if id else ""}] =[ '
+    #     for i in range(self.capacity):
+    #         if self.alive[i]:
+    #             s += f'{self.id[i] if id else i}={round(a[i],rnd)}, '
+    #     s += ']'
+    #     return s
 
     def clone(self, elements=[], move=False, verbose=False, name=None):
         """Clone this ParticleContainer. The clone will have exactly the same arrays.

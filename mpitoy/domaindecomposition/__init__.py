@@ -11,6 +11,55 @@ A submodule for ...
 import numpy as np
 from copy import copy
 
+class TagComposer:
+	"""Class TagComposer composes a unique int from a list of ints.
+
+	"""
+	def __init__(self, digits=[]):
+		"""
+
+		:param digits: list of number of digits per item in the list, specified from left to right
+		 	digits[0] is not used.
+		"""
+		if not digits:
+			raise ValueError("you must specify digits")
+		if sum(digits) > 16:
+			raise ValueError(f"sun(digits)={sum(digits)} cannot exceed 16.")
+		self.digits = digits
+		self.maxval = [10**d for d in digits]
+
+	@property
+	def n(self):
+		return len(self.digits)
+
+
+	def __call__(self, *args):
+		"""Compose the tag from args.
+		:param args: specified from left to right
+		:return:
+		"""
+		tag = args[0]
+		for i in range(1, self.n):
+			if args[i] > self.maxval[i]:
+				raise ValueError(f'{i}-th parameter (={args[i]}) exceeds maximum (={self.maxval[i]}')
+			tag *= self.maxval[i]
+			tag += args[i]
+		return tag
+
+	def decompose(self,tag):
+		s = str(tag)+' '
+		iend = -1
+		args = []
+		for i in range(self.n-1, -1, -1):
+			if i == 0:
+				si = s[:iend]
+			else:
+				si = s[iend - self.digits[i] : iend]
+			args.insert(0, int(si))
+			iend -= self.digits[i]
+		return args
+
+
 class BoundaryPlane:
 	"""Class for representing a boundary plane.
 
@@ -26,6 +75,16 @@ class BoundaryPlane:
 	* if > 0, q is inside the domain, i.e. in the half space lying in the direction of the normal.
 	* if < 0  q is outside the domain, i.e. in the half space lying at the opposite direction of
 	  the normal.
+
+	The BoundaryPlane object stores the rank of the domain (self.myRank), and that of its neighbour
+	on the other side of the domain (self.nbRank)::
+
+		 boundary plane
+			   | n
+		nbRank |---> myrank
+			   |
+
+
 	"""
 	def __init__(self, p, n=None):
 		"""
@@ -37,27 +96,36 @@ class BoundaryPlane:
 
 		# These are the ranks of the processes that correspond a positive location(), resp. a negative location()
 		# These must be initiolized by the domain composition
-		self.me = None # the rank responsible for points inside the domain (positive location)
-		self.nb = None # the rank responsible for points crossing this domain boundary (negative location)
+		self.myRank = None # the rank responsible for points inside the domain (positive location)
+		self.nbRank = None # the rank responsible for points crossing this domain boundary (negative location)
+		self.ghostPCs = {}
 
-	def send_tag(self):
+	def send_tag(self, task, pcid):
 		"""Compose a tag from the sender and the receiver rank. If you send with tag=send_tag() you must
 		receive with tag=recv_tag().
 
 		:return: int
 		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
 		"""
-		return 1000*self.me + self.nb # this is readable for <= 1000 mpi processes.
+		MaxTasks = 100
+		MaxPCs   = 100
+		MaxRanks = 1000
+		tag = MaxRanks * self.myRank + self.nbRank
+		tag = MaxPCs * MaxRanks * MaxRanks * task + \
+		 			   MaxRanks * MaxRanks * pcid + \
+			  			          MaxRanks * self.myRank + \
+ 											 self.nbRank
+		return 1000 * self.myRank + self.nbRank # this is readable for <= 1000 mpi processes.
 
 	def recv_tag(self):
 		"""
 		:return: int, a tag that is composed for
 		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
 		"""
-		return 1000*self.nb + self.me # this is readable for <= 1000 mpi processes.
+		return 1000 * self.nbRank + self.myRank # this is readable for <= 1000 mpi processes.
 
 	def __str__(self):
-		return f"p={self.p}, n={self.n}, me={self.me}, nb={self.nb}"
+		return f"{self.myRank}-|>{self.nbRank}"
 
 	def prnt(self,comm):
 		"""
@@ -65,77 +133,123 @@ class BoundaryPlane:
 		:param comm:
 		:return:
 		"""
-		print(f"{comm.rank=}: p={self.p}, n={self.n}, me={self.me}, nb={self.nb}")
+		print(f"{comm.rank=}: p={self.p}, n={self.n}, me={self.myRank}, nb={self.nbRank}")
 
 	def distance(self, q):
-		"""Locate position of point q relative to the plane.
+		"""Compute the signed distance of point q to this BoundaryPlane.
+		A positive (negative) distance indicates that q is inside (outside) the domain.
 
-		:param q: point to locate relative to the plane
-		:return: float, if the result > 0, q is on the same side of the plane as the normal vector. If
-			the result < 0, q is on the other side as the normal vector. if the result == 0, q is on
-			the plane.
+		:param np.ndarray q: a point in space.
+		:return: float.
 		"""
+		print(f'{self} {q-self.p}dot{self.n} = {np.dot(q-self.p,self.n)}')
 		return np.dot(q-self.p,self.n)
 
 	def findLeavingParticles(self, pc, comm=None, verbose=False):
 		"""Find the particles in particle container pc that are outside the domain.
 
-		if a communicator is provided, the pc sends the leaving particles from this domain, to pc in the neighbouring
-		domain and receives the leaving particles from pc in the neighbouring domain. If a communicator is provided,
-		this function must be called on all ranks.
+		if a communicator is provided, the particles in pc that cross this BoundaryPlane from are
+		moved from to pc in the neighbouring domain, and vice versa. This involves MPI communication
+		in both directions
+
+		If a communicator is provided, this function must be called on all ranks.
 		"""
 		outgoing = []
 		if verbose:
-			print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+			print(f"findLeavingParticles({str(self)}) : pc initially contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
 		for i in range(pc.capacity):
 			if pc.alive[i]:
 				pi = np.array([pc.rx[i],pc.ry[i],pc.rz[i]])
 				di = self.distance(pi)
 				if di < 0:
 					outgoing.append(i)
+					if verbose:
+						print(f'findLeavingParticles({str(self)}) : outgoing.append({pc.id[i]=}), {pc.rx[i]=}, {di=}')
 		if comm:
 			if outgoing:
-				# move the leaving particles to a clone
+				# make a clone with the outgoing particles, moving them from the pc to its clone:
 				pc_outgoing = pc.clone(elements=outgoing, move=True)
 				if verbose:
 					outgoing_elements = [pc.id[i] for i in outgoing]
-					print(f"rank{comm.rank} sending particles {outgoing_elements}")
-					print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+					print(f"findLeavingParticles({str(self)}) : sending particles {outgoing_elements}")
 			else:
 				pc_outgoing = None
+				if verbose:
+					print(f"findLeavingParticles({str(self)}) : sending None")
+
 			#send the clone to the neighbouring domain:
-			req_outgoing = comm.isend(pc_outgoing, dest=self.nb, tag=self.send_tag())
+			req_outgoing = comm.isend(pc_outgoing, dest=self.nbRank, tag=self.send_tag())
 			req_outgoing.wait()
 			# Receive leaving particles from the neighbouring domain
-			req_incoming = comm.irecv(source=self.nb, tag=self.recv_tag())
+			req_incoming = comm.irecv(source=self.nbRank, tag=self.recv_tag())
 			pc_incoming = req_incoming.wait()
 			if not pc_incoming is None:
 				if verbose:
 					incoming_elements = [pc_incoming.id[i] for i in range(pc_incoming.capacity) if pc_incoming.alive[i]]
-					print(f"rank{comm.rank} receiving particles {incoming_elements}")
+					print(f"findLeavingParticles({str(self)}) rank{comm.rank} receiving particles {incoming_elements}")
+				# Copy the incoming particles
 				pc_incoming.copyto(pc)
 				if verbose:
-					print(f"rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+					print(f"findLeavingParticles({str(self)}) rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+			else:
+				if verbose:
+					print(f"findLeavingParticles({str(self)}) rank{comm.rank} receiving None")
 
 		return outgoing
 
 
-	def findGhostParticles(self, pc, ghostWidth=None):
-		"""Find the particles that need to be ghosted. Returns a list of indexes of particles in pc
-		for which the distance to this BoundaryPlane is in [-ghostWidht,0].
+	def findGhostParticles(self, pc, ghostWidth=None, comm=None, verbose=False):
+		"""Find the particles in pc that need to be ghosted in the neighbouring domain.
+		Returns a list of indexes of particles in pc for which the distance to this
+		BoundaryPlane is in [ghostWidht,0].
+
+		If a communicator is provided, the pc sends the ghost particles from this domain, to pc in the neighbouring
+		domain and receives the leaving particles from pc in the neighbouring domain.
+
+		If a communicator is provided, this function must be called on all ranks.
 
 		It is assumed that all particles of pc are outside the domain of this BoundaryPlane.
 		"""
-		signedGhostWidth = -ghostWidth if ghostWidth > 0 else ghostWidth
+		if verbose:
+			print(f"findGhostParticles rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+		if pc.size == 0:
+			# If ParticleContainer pc is empty, there is no need to ask for ghost particles.
+			if verbose:
+				print(f"findGhostParticles {comm.rank}: pc '{pc.name}' is empty. Ghost particles not needed.")
+			return []
+
 		toBeGhosted = []
 		for i in range(pc.capacity):
 			if pc.alive[i]:
 				pi = np.array([pc.rx[i],pc.ry[i],pc.rz[i]])
 				di = self.distance(pi)
-				if di >= signedGhostWidth:
-					if di > 0:
-						raise RuntimeError(f'Particle {pc.name}.[{i}] is inside domain ({self.me}).')
+				if 0 <= di < ghostWidth:
 					toBeGhosted.append(i)
+
+		if comm:
+			if toBeGhosted:
+				# Copy the particles to be ghosted to a clone
+				pc_toBeGhosted = pc.clone(elements=toBeGhosted)
+				if verbose:
+					toBeGhosted_elements = [pc.id[i] for i in toBeGhosted]
+					print(f"findGhostParticles rank{comm.rank} sending ghost particles {toBeGhosted_elements}")
+					print(f"findGhostParticles rank{comm.rank} pc contains {[pc.id[i] for i in range(pc.capacity) if pc.alive[i]]}")
+			else:
+				pc_toBeGhosted = None
+
+			#send the ghost clone to the neighbouring domain:
+			req_toBeGhosted = comm.isend(pc_toBeGhosted, dest=self.nbRank, tag=self.send_tag())
+			req_toBeGhosted.wait()
+			# Receive the ghost clone from the neighbouring domain
+			req_toBeGhosted = comm.irecv(source=self.nbRank, tag=self.recv_tag())
+			pc_toBeGhosted = req_toBeGhosted.wait()
+			# Store the Ghost PC:
+			self.ghostPCs[pc.name] = pc_toBeGhosted
+			if not pc_toBeGhosted is None:
+				if verbose:
+					toBeGhosted_elements = [pc_toBeGhosted.id[i] for i in range(pc_toBeGhosted.capacity) if pc_toBeGhosted.alive[i]]
+					print(f"findGhostParticles rank{comm.rank} receiving ghost particles {toBeGhosted_elements}")
+
 		return toBeGhosted
 
 class ParallelSlabs:
@@ -183,29 +297,29 @@ class ParallelSlabs:
 		if rank == 0:
 			# Domain 0, has only boundary with higher rank
 			b = copy(self.boundaries[rank])
-			b.me = rank
-			b.nb = rank+1
+			b.myRank = rank
+			b.nbRank = rank + 1
 			b.n *= -1 # have normal point inward
 			myBoundaryPlanes.append(b)
 
 		elif rank == comm.size - 1:
 			# Last domain, has only boundary with lower rank
 			b = copy(self.boundaries[rank-1])
-			b.me = rank
-			b.nb = rank-1
+			b.myRank = rank
+			b.nbRank = rank - 1
 			myBoundaryPlanes.append(b)
 
 		else:
 			# Interior domains have two boundaries, with higher and lower rank
 			# lower rank:
 			b = copy(self.boundaries[rank-1])
-			b.me = rank
-			b.nb = rank-1
+			b.myRank = rank
+			b.nbRank = rank - 1
 			myBoundaryPlanes.append(b)
 			# higher rank
 			b = copy(self.boundaries[rank])
-			b.me = rank
-			b.nb = rank+1
+			b.myRank = rank
+			b.nbRank = rank + 1
 			b.n *= -1 # have normal point inward
 			myBoundaryPlanes.append(b)
 
