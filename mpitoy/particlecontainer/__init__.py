@@ -82,7 +82,9 @@ class ParticleContainer:
                                         # only particles for which alive[i]==True exist
         self.free = []                  # list of free elements. if empty the next free element is given by self.size
         ParticleContainer.id += 1
-        self.id = ParticleContainer.id # used for tagging MPI messages
+        self.id = ParticleContainer.id # used for tagging MPI messages. id is unique on a rank, but it is intended that
+            # the same parrticle containers have the same id across ranks. The current implementation guarantees that
+            # provided that all particle container are constructed on each rank in the same order.
 
     def addArray(self, name: str, defaultValue=None): # deprecated, use ParticleArray.__init__() instead.
         """Add an array to the particle container."""
