@@ -38,10 +38,10 @@ def test():
             if leaving:
                 print(f"{comm.rank=} {bp}: {leaving=}, {sim.t=}")
                 assert leaving == [4]
-            # ghost = bp.findGhostParticles(spheres, ghostWidth=1., comm=comm, verbose=True)
-            # if ghost:
-            #     print(f"{comm.rank=} {bp}: {ghost=}, {sim.t=}")
-                # assert ghost == [4]
+            ghost = bp.findGhostParticles(spheres, ghostWidth=1., comm=comm, verbose=True)
+            if ghost:
+                print(f"{comm.rank=} {bp}: {ghost=}, {sim.t=}")
+                assert ghost == [4]
         sim.plot(xbound=xbound, ybound=ybound, save=True)
         print(f'{comm.rank=} ; Barrier')
         comm.Barrier()

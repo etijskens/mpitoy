@@ -99,30 +99,28 @@ class BoundaryPlane:
 		self.myRank = None # the rank responsible for points inside the domain (positive location)
 		self.nbRank = None # the rank responsible for points crossing this domain boundary (negative location)
 		self.ghostPCs = {}
+		self.tagger = TagComposer(digits=[2,2,3,3])
 
-	def send_tag(self, task, pcid):
+	def send_tag(self, pc_id, caller_id):
 		"""Compose a tag from the sender and the receiver rank. If you send with tag=send_tag() you must
 		receive with tag=recv_tag().
 
 		:return: int
 		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
 		"""
-		MaxTasks = 100
-		MaxPCs   = 100
-		MaxRanks = 1000
-		tag = MaxRanks * self.myRank + self.nbRank
-		tag = MaxPCs * MaxRanks * MaxRanks * task + \
-		 			   MaxRanks * MaxRanks * pcid + \
-			  			          MaxRanks * self.myRank + \
- 											 self.nbRank
-		return 1000 * self.myRank + self.nbRank # this is readable for <= 1000 mpi processes.
+		tag = self.tagger(pc_id, caller_id, self.myRank, self.nbRank)
+		print(tag)
+		return tag
 
-	def recv_tag(self):
+	def recv_tag(self, pc_id, caller_id):
 		"""
 		:return: int, a tag that is composed for
 		:raises: TypeError if self.me or self.nb are None. (which means that there is no MPI context.
 		"""
-		return 1000 * self.nbRank + self.myRank # this is readable for <= 1000 mpi processes.
+		tag = self.tagger(pc_id, caller_id, self.nbRank, self.myRank)
+		print(tag)
+		return tag
+
 
 	def __str__(self):
 		return f"{self.myRank}-|>{self.nbRank}"
@@ -178,10 +176,10 @@ class BoundaryPlane:
 					print(f"findLeavingParticles({str(self)}) : sending None")
 
 			#send the clone to the neighbouring domain:
-			req_outgoing = comm.isend(pc_outgoing, dest=self.nbRank, tag=self.send_tag())
+			req_outgoing = comm.isend(pc_outgoing, dest=self.nbRank, tag=self.send_tag(1,pc.ID))
 			req_outgoing.wait()
 			# Receive leaving particles from the neighbouring domain
-			req_incoming = comm.irecv(source=self.nbRank, tag=self.recv_tag())
+			req_incoming = comm.irecv(source=self.nbRank, tag=self.recv_tag(1,pc.ID))
 			pc_incoming = req_incoming.wait()
 			if not pc_incoming is None:
 				if verbose:
@@ -238,10 +236,10 @@ class BoundaryPlane:
 				pc_toBeGhosted = None
 
 			#send the ghost clone to the neighbouring domain:
-			req_toBeGhosted = comm.isend(pc_toBeGhosted, dest=self.nbRank, tag=self.send_tag())
+			req_toBeGhosted = comm.isend(pc_toBeGhosted, dest=self.nbRank, tag=self.send_tag(2, pc.ID))
 			req_toBeGhosted.wait()
 			# Receive the ghost clone from the neighbouring domain
-			req_toBeGhosted = comm.irecv(source=self.nbRank, tag=self.recv_tag())
+			req_toBeGhosted = comm.irecv(source=self.nbRank, tag=self.recv_tag(2, pc.ID))
 			pc_toBeGhosted = req_toBeGhosted.wait()
 			# Store the Ghost PC:
 			self.ghostPCs[pc.name] = pc_toBeGhosted

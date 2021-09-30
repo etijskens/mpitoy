@@ -69,7 +69,7 @@ class ParticleArray(list):
 
 class ParticleContainer:
     """Base class for particle containers"""
-    id = 0
+    ID = 0
     def __init__(self, capacity=10, name=None):
         if not name:
             raise RuntimeError("Parameter 'name' is required.")
@@ -81,8 +81,8 @@ class ParticleContainer:
         ParticleArray(self, name='alive', defaultValue=False)
                                         # only particles for which alive[i]==True exist
         self.free = []                  # list of free elements. if empty the next free element is given by self.size
-        ParticleContainer.id += 1
-        self.id = ParticleContainer.id # used for tagging MPI messages. id is unique on a rank, but it is intended that
+        ParticleContainer.ID += 1
+        self.ID = ParticleContainer.ID # used for tagging MPI messages. id is unique on a rank, but it is intended that
             # the same parrticle containers have the same id across ranks. The current implementation guarantees that
             # provided that all particle container are constructed on each rank in the same order.
 
