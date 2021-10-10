@@ -27,34 +27,51 @@ This can be achieved by creating a functor for every Array. It will need to stor
   that serves as the locations of the received elements. This list must be accessible
   by the other arrays when their updates are received.
 
-### Tags are important ...
+### Tags are important, or not ...
 
 When the array updates are sent/received with **non-blocking** messages, the message tag
-   is essential for pairing the sends and recvs, as there may be many sends and receives
-   simultaneously active. The difficulty is two-fold:
-   - the tag must be unique for the message during the period in which tag collisions 
-     may happen. As time steps are separated by and MPI barrier the tags can be reused the 
-     next timestep.
-   - both the sender and its corresponding receiver must have the same tag, in order for the
-     receiver to pick the correct message.
+is essential for pairing the sends and recvs, as there may be many sends and receives
+simultaneously active. The difficulty is two-fold:
+- the tag must be unique for the message during the period in which tag collisions 
+  may happen. As time steps are separated by and MPI barrier the tags can be reused the 
+  next timestep. 
+- both the sender and its corresponding receiver must have the same tag, in order for the
+  receiver to pick the correct message.
 
-   If the message is blocking, tags are not an issue. However, instead it is essential that 
-   the order of the messages is the same on all processes.  
-   That is, if domain _n_ send an update for array1 to domain _n+1_, then domain 
-   must first receive it and than send its update for array1 to domain _n_. This 
-   requirement is automatically satisfied with mpi_sendrecv. The order in which the 
-   different arrays are threated must be the same on both domains, though.
+If the message is blocking, tags are not an issue. However, instead it is essential that 
+the order of the messages is the same on all processes.  
+That is, if domain _n_ send an update for array1 to domain _n+1_, then domain 
+must first receive it and than send its update for array1 to domain _n_. This 
+requirement is automatically satisfied with mpi_sendrecv. The order in which the 
+different arrays are threated must be the same on both domains, though.
 
-   There are to possibilites to make sure that the sender has the same tag:
-   1. both the sender and receiver construct the tag from information that is shared between
-      processes, e.g. an the name or id of the array and of the particle container. Obviously,
-      this can only work if these properties are indeed the same in all (neighbouring) processes.
-      Often, it is essential for this that the order in which these objects are constructed is
-      the same on all processes.
-   2. The sender constructs a unique tag and comunicates it to the receiver using blocking 
-      communication (non-blocking communication would raise the tag problem again). Note 
-      this requires that the order of the sends and receives must match. E.g. when all even 
-      ranks are sending, all odd ranks must receive with the object as the sender.
+There are two possibilites to make sure that the sender and the receiver have the same tag:
+1. both the sender and receiver construct the tag from information that is **shared between
+   processes**, e.g. an the name or id of the array and of the particle container. Obviously,
+   this can only work if these properties are indeed the same in all (neighbouring) processes.
+   Often, it is essential for this that the order in which these objects are constructed is
+   the same on all processes.
+2. The sender constructs a unique tag and communicates it to the receiver using blocking 
+   communication (non-blocking communication would raise the tag problem again). Note 
+   this requires that the order of the sends and receives must match. That is, when all even 
+   ranks are sending, all odd ranks must receive. Alternatively, `sendrecv` can be used
+   to avoid deadlocking. The pointer of the sending object is by definition unique and could
+   in principle be used as a tag. 
+
+######Caveat
+Using `id(object)` (the equivalent of a pointer in Python) in Python yielded 
+`OverflowError: value too large to convert to int`. 
+The size of a Python `int` is larger than the size of the `int` type used by MPI.
+This might happen in C++ as well. The size of a pointer in C++ is 8 bytes (for 64bit OS).
+The MPI `int` may be only 4 bytes.
+
+The alternative that was tested was using a simple "tag factory" which can provide tags
+that were not used before. This uses tag i for sending to the right and receiving from the 
+left, and tag i-1 for sending to the left and receiving from the right. Tags must be only 
+send to the right and received from the left, as the tag for the other direction can be 
+derived. This seems to work well and reduces the number of tags to be communicate by a
+factort (as the tag for right to left communication is the tag for left to right communication
+minus one).
    
 ### avoid deadlocks with mpi_sendrecv
 

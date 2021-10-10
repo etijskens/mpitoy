@@ -16,3 +16,7 @@ API
 .. automodule:: mpitoy.domainboundary
    :members:
 
+
+.. automodule:: mpitoy.mprint
+   :members:
+

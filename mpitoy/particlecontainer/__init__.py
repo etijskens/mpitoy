@@ -66,10 +66,16 @@ class ParticleArray(list):
     def __str__(self):
         return f"{self.pc.name}.{self.name} = {list([self[i] for i in range(self.pc.capacity) if self.pc.alive[i]])}"
 
+    def fullName(self):
+        return f'{self.pc}.{self.name}'
+
+    def tag(self):
+        """Generate a tag that is unique for the array, but identical on all ranks."""
+        return int.from_bytes(self.fullName().encode(), 'little')
 
 class ParticleContainer:
     """Base class for particle containers"""
-    ID = 0
+    ID = 0 # particle container id
     def __init__(self, capacity=10, name=None):
         if not name:
             raise RuntimeError("Parameter 'name' is required.")

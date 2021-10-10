@@ -195,8 +195,40 @@ def test_ParticleContainer_id():
     assert pc1.ID == 1
     assert pc2.ID == 2
 
+import math
+def convertToNumber (s):
+    return int.from_bytes(s.encode(), 'little')
+
+def convertFromNumber (n):
+    return n.to_bytes(math.ceil(n.bit_length() / 8), 'little').decode()
+
+def test_tag():
+    tags = []
+    for s in [ 'spheres.rx', 'spheres.ry', 'spheres.rz'
+             , 'spheres.vx', 'spheres.vy', 'spheres.vz'
+             , 'spheres.ax', 'spheres.ay', 'spheres.az'
+             , 'spheres.m', 'spheres.id'
+             ]:
+        tag = convertToNumber(s)
+        print(f"{s}->{tag}")
+        if not tag in tags:
+            tags.append(tag)
+        else:
+            assert False
+
+    for i,s in enumerate(
+             [ 'spheres.rx', 'spheres.ry', 'spheres.rz'
+             , 'spheres.vx', 'spheres.vy', 'spheres.vz'
+             , 'spheres.ax', 'spheres.ay', 'spheres.az'
+             , 'spheres.m', 'spheres.id'
+             ]):
+        tag = convertToNumber(s)
+        print(f"{s}->{tag}")
+        if tag != tags[i]:
+            assert False
+
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_ParticleContainer_id
+    the_test_you_want_to_debug = test_tag
 
     print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()

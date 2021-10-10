@@ -10,6 +10,8 @@ Top-level package for mpitoy.
 
 __version__ = "0.1.3"
 
+import mpitoy.mprint
+
 import mpitoy.domaindecomposition
 
 import mpitoy.simulation
@@ -21,7 +23,13 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 class Spheres(mpitoy.particlecontainer.ParticleContainer):
-    def __init__(self,n,name=None):
+    def __init__(self,n,name=None, id0=0):
+        """
+
+        :param n: number of particles to generate
+        :param name: name of the particle container
+        :param id0: number particle ids starting with id0. Allows to have distinct particle ids on different ranks.
+        """
         nm = 'spheres' if name is None else name
         super().__init__(n,name=nm)
         radius = 0.5
@@ -38,7 +46,6 @@ class Spheres(mpitoy.particlecontainer.ParticleContainer):
         self.addArray('az', 0.0)
         for j in range(n):
             i = self.addElement()
-            self.id[i] = i
+            self.id[i] = id0 + i
             self.rx[i] = (1 + 2 * i) * radius
-
 

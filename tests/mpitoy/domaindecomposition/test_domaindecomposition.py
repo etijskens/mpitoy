@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,'.')
 """Tests for sub-module mpitoy.domainboundary."""
 import pytest
-from mpitoy.domaindecomposition import BoundaryPlane, ParallelSlabs, TagComposer
+from mpitoy.domaindecomposition import BoundaryPlane, ParallelSlabs, TagComposer, TagStore
 from mpitoy.simulation import setColors, Simulation
 from mpitoy import Spheres
 
@@ -60,8 +60,25 @@ def test_tagcomposer():
         tag = tagger(100, 200, 30, 40)
 
 
+def test_tagstore():
+    tagstore = TagStore()
+    spheres = Spheres(5)
+    rx = spheres.rx
+    ry = spheres.ry
+
+    tag = tagstore.getTag(2)
+    assert tag == 1
+
+    tag = tagstore.getTag(4)
+    assert tag == 5
+
+    tag = tagstore.getTag(1)
+    assert tag == 6
+
 if __name__ == "__main__":
-    the_test_you_want_to_debug = test_tagcomposer
+    the_test_you_want_to_debug = test_tagstore
+
+    print("__main__ running", the_test_you_want_to_debug)
     the_test_you_want_to_debug()
     print("-*# finished #*-")
 # ==============================================================================
