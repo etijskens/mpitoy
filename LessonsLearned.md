@@ -16,16 +16,39 @@ boundary to the neighbouring domain. (presumably, this will happen at almost eve
       +-- Array2 +-- send --|-> recv --+ Array2 --+
                  +-- recv --|-> recv --+ 
 
-This can be achieved by creating a functor for every Array. It will need to store 
+This can be achieved by creating a communication functor for every particle container, 
+which in turn creates a communication functor for each array. The array communiation
+functor must store: 
 - the tag to be used, 
-- the send and recv buffers, 
+- a send and recv buffer, 
 - a reference to the array object, 
 - a reference to the list of indices to be send, to fill the send buffer with the 
   correct elements. This list is obviously the same for all arrays of a particle
-  container.
+  container, and should be stored by the particle container communication functor
 - When the first array update is received, a list of empty elements must be created
   that serves as the locations of the received elements. This list must be accessible
-  by the other arrays when their updates are received.
+  by the other arrays of the same particle container when their updates are received. 
+  It seems best to store this in the particle container communication functor. The 
+  list can only be created after the first array is received.
+
+So, for every boundary in a domain, there will be two particle container communication 
+functors, one for communicating the particles that move across the boundary, and one for 
+the ghost particles. The ghost particle container is peculiar.
+
+### Communicating ghost particles
+
+The communication functor for ghost particles is different because the particle container
+receiving the particles is not the same particle container on both sides of the domain,
+the receiving particle container is the ghost particle container of the sending particle
+container. Hence, we need a mechanism to pair a particle container and its ghost particle
+container. At first sight, making the ghost particle container a child of the particle
+container seems practical.
+
+If we insist on communicating only changes in the ghost particle container, we must 
+communicate two lists: the new ghost particles and the ghost particles that must be removed.
+It is best to first communicate the particles that must be removed because in this way, they
+free memory space for the new ghosts. Communication of the ghost particles that must be removed 
+requires communicating the list. There are particle arrays to be communicated. 
 
 ### Tags are important, or not ...
 
@@ -36,10 +59,11 @@ simultaneously active. The difficulty is two-fold:
   may happen. As time steps are separated by and MPI barrier the tags can be reused the 
   next timestep. 
 - both the sender and its corresponding receiver must have the same tag, in order for the
-  receiver to pick the correct message.
+  receiver to pick up the correct message.
 
 If the message is blocking, tags are not an issue. However, instead it is essential that 
-the order of the messages is the same on all processes.  
+the order of the messages is the same on all processes. (This might be more difficult to
+guarantee and if sth goes wrong, it will be hard to debug.)
 That is, if domain _n_ send an update for array1 to domain _n+1_, then domain 
 must first receive it and than send its update for array1 to domain _n_. This 
 requirement is automatically satisfied with mpi_sendrecv. The order in which the 
@@ -49,8 +73,7 @@ There are two possibilites to make sure that the sender and the receiver have th
 1. both the sender and receiver construct the tag from information that is **shared between
    processes**, e.g. an the name or id of the array and of the particle container. Obviously,
    this can only work if these properties are indeed the same in all (neighbouring) processes.
-   Often, it is essential for this that the order in which these objects are constructed is
-   the same on all processes.
+   
 2. The sender constructs a unique tag and communicates it to the receiver using blocking 
    communication (non-blocking communication would raise the tag problem again). Note 
    this requires that the order of the sends and receives must match. That is, when all even 
@@ -76,8 +99,8 @@ minus one).
 ### avoid deadlocks with mpi_sendrecv
 
 Combined sendrecv (mpi_sendrecv) is usefull to implement the communication across a boundary,
-as this communication is symmetric: there is always a send and receive on both sides. Whenb
-blocking communication is used, and the sends and recvs are ordered in the same way in  
+as this communication is symmetric: there is always a send and receive on both sides. When
+blocking communication is used and the sends and recvs are ordered in the same way in  
 neighbouring domains the program will deadlock. mpi_sendrecv avoids this.
 
 ### Dynamically adjusting buffer size on the receiver side
@@ -87,7 +110,7 @@ the message. See
 - http://www.mathcs.emory.edu/~cheung/Courses/355/Syllabus/92-MPI/send+recv-adv.html
 - https://mpitutorial.com/tutorials/dynamic-receiving-with-mpi-probe-and-mpi-status/
 
-### Spreading communication across threads in an MPI process (later on)
+### Spreading communication across threads in an MPI process (to be solved later)
 
 Clearly, this entails many messages. If they are executed serially, this 
 might imply a lot of wasted cycles. Mpacts will supposedly run in a hybrid environment 
@@ -97,7 +120,7 @@ pre- and post-processing in parallel. This requires sending messages between thr
 an MPI program. Check the PRACE course "Hybrid CPU programming with OpenMP and MPI" for 
 how to do this (https://events.prace-ri.eu/event/1225/).
 
-### How many MPI processes per node? (later on)
+### How many MPI processes per node? (to be solved later)
 
 The obvious options are:
 

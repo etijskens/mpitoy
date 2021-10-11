@@ -378,7 +378,6 @@ class ArraySendRecv:
     """
     def __init__(self, array, bp, elements=[], verbose=False):
         self.array = array
-        self.comm = bp.comm
         self.bp = bp
         self.elements_send = elements # the indices of the elements that must be sent
 
@@ -411,12 +410,12 @@ class ArraySendRecv:
         for ie in self.elements_send:
             self.sendbuffer.append(self.array[ie])
 
-        reqsend = self.comm.isend(self.sendbuffer, dest=self.bp.nbRank, tag=self.sendtag)
-        reqrecv = self.comm.irecv(source=self.bp.nbRank, tag=self.recvtag)
-        self.recvbuffer = reqrecv.wait()
+        reqsend = self.bp.comm.isend(self.sendbuffer, dest=self.bp.nbRank, tag=self.sendtag)
         reqsend.wait()
+        reqrecv = self.bp.comm.irecv(source=self.bp.nbRank, tag=self.recvtag)
+        self.recvbuffer = reqrecv.wait()
         if verbose:
-            mprint(f'{self.bp}; {self.sendbuffer=}, {self.recvbuffer=}')
+            mprint(f'{self.bp}; {self.array.name}, {self.sendbuffer=}, {self.recvbuffer=}')
 
         if self.recvbuffer:
             # not empty
@@ -431,8 +430,8 @@ class ArraySendRecv:
                 pc = self.array.pc
                 for val in self.recvbuffer:
                     i = pc.addElement()
-                    self.array[i] = val
                     elements_recv.append(i)
+
                 # If this object has a parent (because several arrays of the particle container were communicated),
                 # store the particle positions, so that subseauent arrays are using the same element location, as
                 # expected.
@@ -440,7 +439,41 @@ class ArraySendRecv:
                     self.parent.elements_recv = elements_recv
                 # else: only a single array was sent.
 
-                mprint(f'{self.array}')
+            # mprint(f'{self.array}')
+            for i, element in enumerate(elements_recv):
+                # mprint(f'{i=}, {element=}, {self.array.name}, {self.array[element]}, {self.recvbuffer[i]}')
+                self.array[element] = self.recvbuffer[i]
+            mprint(f'{self.array}')
+
+class PcSendRecv:
+    """
+    Send/receive PC elements to/from a neighbour.
+
+    Set up point-to-point communication between the two domains on both sides of a boundary plane.
+    An object of this class must be set up in both domains. Each object both sends and receives.
+    E.g. domain i sends a message to domain i+1 and domain i+1 receives this message. Similarly,
+    domoin i+1 sends a message to doain i and domain i receives this message. Both messages
+    correspond to the same array, instantiated in both domains.
+
+    Each domain needs as many Arraycommunicator objects as it has boundary planes.
+    It is unclear whether the definition of a neighbourhood communicator would be important.
+    let's studuy a bit
+    """
+    def __init__(self, pc, bp, elements=[], verbose=False):
+        self.pc = pc
+        self.bp = bp
+        self.elements_send = elements # the indices of the elements that must be sent
+        self.elements_recv = []
+        self.asrs = []
+        for array in pc.arrays.values():
+            asr = ArraySendRecv(array, bp, elements=elements, verbose=verbose )
+            asr.parent = self
+            self.asrs.append(asr)
+
+
+    def __call__(self, verbose=False):
+        for asr in self.asrs:
+            asr(verbose=verbose)
 
 
 class Domain:

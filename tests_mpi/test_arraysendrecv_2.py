@@ -76,19 +76,21 @@ def test():
         for asr in asrs:
             asr(verbose=True)
             if asr.bp.myRank < asr.bp.nbRank:
+                # sending right
+                # receiving from left
                 id0 = n* comm.rank    + comm.rank
                 id1 = n*(comm.rank+1) + comm.rank
+                mprint(asr.bp, id0,id1)
                 assert id0 in asr.sendbuffer
                 assert id1 in asr.recvbuffer
-                assert asr.array[5] == id0
             else:
+                # sending right to left
+                # receiving from right
                 id0 = n*(comm.rank-1) + comm.rank-1
                 id1 = n* comm.rank    + comm.rank-1
+                mprint(asr.bp, id0,id1)
                 assert id0 in asr.recvbuffer
                 assert id1 in asr.sendbuffer
-                assert asr.array[5] == id1
-
-
 
 
 if __name__ == "__main__":
