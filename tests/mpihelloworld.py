@@ -3,7 +3,8 @@
 Parallel Hello World
 """
 
-from mpi4py import MPI
+from mpi4py import MPI, __version__
+print(__version__)
 import sys
 
 size = MPI.COMM_WORLD.Get_size()

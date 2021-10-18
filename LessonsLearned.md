@@ -81,7 +81,7 @@ There are two possibilites to make sure that the sender and the receiver have th
    to avoid deadlocking. The pointer of the sending object is by definition unique and could
    in principle be used as a tag. 
 
-######Caveat
+###### Caveat
 Using `id(object)` (the equivalent of a pointer in Python) in Python yielded 
 `OverflowError: value too large to convert to int`. 
 The size of a Python `int` is larger than the size of the `int` type used by MPI.
@@ -95,6 +95,10 @@ send to the right and received from the left, as the tag for the other direction
 derived. This seems to work well and reduces the number of tags to be communicate by a
 factort (as the tag for right to left communication is the tag for left to right communication
 minus one).
+
+Broad casting the tag is also an option, as message are further discriminated by source and 
+destination. the tag factory must then be instatiated only once.
+
    
 ### avoid deadlocks with mpi_sendrecv
 
